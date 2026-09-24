@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="禅意仪表盘 - 时间、天气、网络IP检测、激励格言，带有佛家禅意背景的个人主页">
+  <meta name="theme-color" content="#4a6741">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>禅意仪表盘 · Zen Dashboard</title>
+  <!-- 简洁 SVG favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234a6741'/><text y='.9em' x='50%' text-anchor='middle' font-size='60' fill='%23f7f3e9'>禅</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --paper: #f7f3e9;
+      --accent: #4a6741;
+      --mist: rgba(255,255,255,0.75);
+      --gold: #c9a227;
+      --shadow: rgba(0,0,0,0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif SC', 'ZCOOL XiaoWei', serif;
+      background: 
+        linear-gradient(180deg, rgba(247,243,233,0.85) 0%, rgba(230,240,235,0.7) 50%, rgba(247,243,233,0.9) 100%),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23e8f0e9"/><stop offset="100%" stop-color="%23d4e4d8"/></linearGradient></defs><rect fill="url(%23g)" width="1200" height="800"/><path d="M0 520 Q300 480 600 540 T1200 500 L1200 800 L0 800 Z" fill="%23c8d9c8" opacity="0.6"/><path d="M0 580 Q400 540 800 600 T1200 560 L1200 800 L0 800 Z" fill="%23b8cbb8" opacity="0.5"/><circle cx="180" cy="160" r="70" fill="%23f5f0d8" opacity="0.7"/><path d="M900 200 Q950 150 1000 200 Q950 180 900 200" fill="none" stroke="%234a6741" stroke-width="1.5" opacity="0.4"/><path d="M200 650 Q250 620 300 650" fill="none" stroke="%234a6741" stroke-width="1" opacity="0.3"/></svg>') center/cover no-repeat fixed;
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+      padding-left: calc(88px + 1rem);
+    }
+    /* 格言 */
+    .quote-box {
+      background: var(--mist);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(74,103,65,0.25);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 20px var(--shadow);
+      position: relative;
+    }
+    .quote-box::before {
+      content: "「";
+      position: absolute;
+      left: 12px; top: 4px;
+      font-size: 2rem;
+      color: var(--accent);
+      opacity: 0.4;
+    }
+    .quote-text {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .quote-author {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-style: italic;
+    }
+    .quote-refresh {
+      position: absolute;
+      right: 12px; top: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .quote-refresh:hover { opacity: 1; }
+    /* 导航链接 */
+    /* 左侧导航 */
+    .side-nav {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 88px;
+      background: rgba(247,243,233,0.92);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(74,103,65,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      z-index: 100;
+      box-shadow: 2px 0 16px rgba(0,0,0,0.06);
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #4a6741, #3d5a36);
+      color: #f7f3e9;
+      text-decoration: none;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      box-shadow: 0 4px 12px rgba(74,103,65,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+      writing-mode: horizontal-tb;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .nav-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 6px 16px rgba(74,103,65,0.4);
+    }
+    .nav-btn.life {
+      background: linear-gradient(135deg, #6b5b45, #5a4a38);
+    }
+    .nav-btn.note {
+      background: linear-gradient(135deg, #5a6b8a, #4a5a7a);
+    }
+    @media (max-width: 600px) {
+      .side-nav {
+        width: 100%;
+        height: auto;
+        bottom: auto;
+        flex-direction: row;
+        justify-content: center;
+        padding: 0.6rem;
+        border-right: none;
+        border-bottom: 1px solid rgba(74,103,65,0.2);
+      }
+      .nav-btn {
+        width: auto;
+        height: auto;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+      }
+      .container {
+        padding-left: 1rem;
+        padding-top: 4.5rem;
+      }
+    }
+    /* 卡片网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--mist);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(74,103,65,0.2);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      box-shadow: 0 3px 14px var(--shadow);
+    }
+    .card h3 {
+      font-size: 0.95rem;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-bottom: 1px dashed rgba(74,103,65,0.3);
+      padding-bottom: 0.35rem;
+    }
+    .card .value {
+      font-size: 1.05rem;
+      word-break: break-all;
+    }
+    .card .sub {
+      font-size: 0.85rem;
+      color: #555;
+      margin-top: 0.25rem;
+    }
+    .status {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-left: 0.3rem;
+    }
+    .status.ok { background: #d4edda; color: #155724; }
+    .status.fail { background: #f8d7da; color: #721c24; }
+    .status.pending { background: #fff3cd; color: #856404; }
+    .time-big {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--ink);
+    }
+    .date-line {
+      font-size: 1rem;
+      color: #444;
+      margin-top: 0.2rem;
+    }
+    .weather-main {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: #666;
+      opacity: 0.8;
+    }
+    @media (max-width: 500px) {
+      .time-big { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 左侧导航 WORK / LIFE / NOTE -->
+  <nav class="side-nav">
+    <a href="work.html" class="nav-btn">WORK</a>
+    <a href="life.html" class="nav-btn life">LIFE</a>
+    <a href="note.html" class="nav-btn note">NOTE</a>
+  </nav>
+
+  <div class="container">
+    <!-- 格言 -->
+    <div class="quote-box" id="quoteBox">
+      <button class="quote-refresh" onclick="refreshQuote()" title="换一句">⟳</button>
+      <div class="quote-text" id="quoteText">心如止水，万事皆空。</div>
+      <div class="quote-author" id="quoteAuthor">— 禅语</div>
+    </div>
+
+    <!-- 时间日期天气 -->
+    <div class="grid" style="margin-bottom:1rem;">
+      <div class="card">
+        <h3>⏱ 当前时间 · 日期</h3>
+        <div class="time-big" id="clock">--:--:--</div>
+        <div class="date-line" id="dateLine">加载中...</div>
+      </div>
+      <div class="card">
+        <h3>🌤 天气</h3>
+        <div class="weather-main" id="weatherMain">获取中...</div>
+        <div class="sub" id="weatherSub"></div>
+      </div>
+    </div>
+
+    <!-- 网络信息 -->
+    <div class="grid">
+      <div class="card">
+        <h3>🏠 局域网地址</h3>
+        <div class="value" id="lanIp">检测中...</div>
+        <div class="sub">WebRTC 本地 IP</div>
+      </div>
+      <div class="card">
+        <h3>🇨🇳 国内网络 IP · 归属地</h3>
+        <div class="value" id="cnIp">查询中...</div>
+        <div class="sub" id="cnLoc"></div>
+      </div>
+      <div class="card">
+        <h3>🌐 国外网络 IP · 归属地</h3>
+        <div class="value" id="foreignIp">查询中...</div>
+        <div class="sub" id="foreignLoc"></div>
+      </div>
+      <div class="card">
+        <h3>🔍 访问 Google 的 IP · 归属地</h3>
+        <div class="value" id="googleIp">查询中...</div>
+        <div class="sub" id="googleLoc"><span class="status pending" id="googleStatus">检测连通性...</span></div>
+      </div>
+      <div class="card">
+        <h3>▶️ 访问 YouTube 的 IP · 归属地</h3>
+        <div class="value" id="ytIp">查询中...</div>
+        <div class="sub" id="ytLoc"><span class="status pending" id="ytStatus">检测连通性...</span></div>
+      </div>
+      <div class="card">
+        <h3>🤖 访问国外 AI (Gemini / Grok / ChatGPT)</h3>
+        <div class="value" id="aiIp">查询中...</div>
+        <div class="sub" id="aiLoc">
+          <span class="status pending" id="geminiStatus">Gemini</span>
+          <span class="status pending" id="grokStatus">Grok</span>
+          <span class="status pending" id="chatgptStatus">ChatGPT</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      禅意仪表盘 · 愿你心静如水 · Cloudflare Pages 友好
+    </footer>
+  </div>
+
+  <script>
+    // ========== 格言库 ==========
+    const quotes = [
+      { text: "心如止水，万事皆空。", author: "禅语" },
+      { text: "行到水穷处，坐看云起时。", author: "王维" },
+      { text: "本来无一物，何处惹尘埃。", author: "慧能大师" },
+      { text: "菩提本无树，明镜亦非台。", author: "慧能大师" },
+      { text: "一花一世界，一叶一菩提。", author: "佛偈" },
+      { text: "一切有为法，如梦幻泡影，如露亦如电，应作如是观。", author: "《金刚经》" },
+      { text: "应无所住而生其心。", author: "《金刚经》" },
+      { text: "放下屠刀，立地成佛。", author: "禅宗公案" },
+      { text: "吃茶去。", author: "赵州禅师" },
+      { text: "日日是好日。", author: "云门文偃" },
+      { text: "平常心是道。", author: "马祖道一" },
+      { text: "春有百花秋有月，夏有凉风冬有雪。若无闲事挂心头，便是人间好时节。", author: "无门慧开" },
+      { text: "不识庐山真面目，只缘身在此山中。", author: "苏轼" },
+      { text: "山重水复疑无路，柳暗花明又一村。", author: "陆游" },
+      { text: "海纳百川，有容乃大；壁立千仞，无欲则刚。", author: "林则徐" },
+      { text: "知足不辱，知止不殆。", author: "《道德经》" },
+      { text: "上善若水。水善利万物而不争。", author: "《道德经》" },
+      { text: "天行健，君子以自强不息。", author: "《周易》" },
+      { text: "路漫漫其修远兮，吾将上下而求索。", author: "屈原" },
+      { text: "勿以善小而不为，勿以恶小而为之。", author: "刘备" },
+      { text: "静以修身，俭以养德。", author: "诸葛亮" },
+      { text: "非淡泊无以明志，非宁静无以致远。", author: "诸葛亮" },
+      { text: "但愿人长久，千里共婵娟。", author: "苏轼" },
+      { text: "人生如逆旅，我亦是行人。", author: "苏轼" },
+      { text: "一念放下，万般自在。", author: "高僧大德" },
+      { text: "心净则国土净。", author: "佛语" },
+      { text: "诸恶莫作，众善奉行，自净其意，是诸佛教。", author: "《七佛通戒偈》" },
+      { text: "烦恼即菩提。", author: "禅宗" },
+      { text: "当下即是。", author: "禅语" },
+      { text: "无求便是安心法，不争常得自在心。", author: "古德" }
+    ];
+
+    function refreshQuote() {
+      const q = quotes[Math.floor(Math.random() * quotes.length)];
+      document.getElementById('quoteText').textContent = q.text;
+      document.getElementById('quoteAuthor').textContent = '— ' + q.author;
+    }
+    refreshQuote();
+
+    // ========== 时钟 ==========
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+      const week = ['日','一','二','三','四','五','六'][now.getDay()];
+      const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${week}`;
+      document.getElementById('dateLine').textContent = dateStr;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ========== 天气 (wttr.in) ==========
+    async function loadWeather() {
+      try {
+        const res = await fetch('https://wttr.in/?format=j1&lang=zh');
+        const data = await res.json();
+        const cur = data.current_condition[0];
+        const area = data.nearest_area[0];
+        const temp = cur.temp_C;
+        const desc = cur.lang_zh ? cur.lang_zh[0].value : cur.weatherDesc[0].value;
+        const feels = cur.FeelsLikeC;
+        const humidity = cur.humidity;
+        const city = area.areaName[0].value;
+        const region = area.region[0].value;
+        document.getElementById('weatherMain').textContent = `${temp}°C · ${desc}`;
+        document.getElementById('weatherSub').textContent = `${city}, ${region} · 体感 ${feels}°C · 湿度 ${humidity}%`;
+      } catch (e) {
+        document.getElementById('weatherMain').textContent = '天气获取失败';
+        document.getElementById('weatherSub').textContent = '请检查网络或稍后重试';
+      }
+    }
+    loadWeather();
+
+    // ========== 局域网 IP (WebRTC) ==========
+    function getLocalIP() {
+      return new Promise((resolve) => {
+        const ips = new Set();
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [] });
+          pc.createDataChannel('');
+          pc.onicecandidate = (e) => {
+            if (!e.candidate) {
+              pc.close();
+              resolve(Array.from(ips).join(', ') || '无法获取 (浏览器隐私限制)');
+              return;
+            }
+            const match = e.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
+            if (match && e.candidate.candidate.includes('typ host')) {
+              ips.add(match[1]);
+            }
+          };
+          pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => resolve('不支持'));
+          setTimeout(() => {
+            pc.close();
+            resolve(Array.from(ips).join(', ') || '超时 / 隐私限制');
+          }, 2000);
+        } catch (e) {
+          resolve('不支持 WebRTC');
+        }
+      });
+    }
+    getLocalIP().then(ip => {
+      document.getElementById('lanIp').textContent = ip;
+    });
+
+    // ========== 公网 IP 与归属地 ==========
+    // 使用多个源以提高兼容性
+    async function fetchIpSb() {
+      const res = await fetch('https://api.ip.sb/geoip');
+      return await res.json();
+    }
+    async function fetchIpApiCo() {
+      const res = await fetch('https://ipapi.co/json/');
+      return await res.json();
+    }
+    async function fetchIp9() {
+      try {
+        const res = await fetch('https://ip9.com.cn/get');
+        return await res.json();
+      } catch { return null; }
+    }
+
+    async function loadPublicIPs() {
+      let ip = '', locCn = '', locEn = '', country = '', city = '', isp = '';
+      try {
+        // 优先 ip.sb
+        const data = await fetchIpSb();
+        ip = data.ip || data.ip_address || '';
+        country = data.country || data.country_code || '';
+        city = data.city || '';
+        isp = data.isp || data.organization || data.org || '';
+        locEn = [city, data.region, country].filter(Boolean).join(', ');
+        if (isp) locEn += ' · ' + isp;
+      } catch (e) {
+        try {
+          const data = await fetchIpApiCo();
+          ip = data.ip || '';
+          country = data.country_name || data.country || '';
+          city = data.city || '';
+          isp = data.org || '';
+          locEn = [city, data.region, country].filter(Boolean).join(', ');
+          if (isp) locEn += ' · ' + isp;
+        } catch {}
+      }
+
+      // 尝试中文归属
+      try {
+        const cn = await fetchIp9();
+        if (cn && cn.ret === 200 && cn.data) {
+          const d = cn.data;
+          locCn = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ');
+          if (!ip) ip = d.ip;
+        }
+      } catch {}
+
+      // 填充所有卡片（当前出口 IP 相同）
+      const displayIp = ip || '获取失败';
+      const displayLoc = locCn || locEn || '未知';
+
+      document.getElementById('cnIp').textContent = displayIp;
+      document.getElementById('cnLoc').textContent = locCn || displayLoc;
+
+      document.getElementById('foreignIp').textContent = displayIp;
+      document.getElementById('foreignLoc').textContent = locEn || displayLoc;
+
+      document.getElementById('googleIp').textContent = displayIp;
+      document.getElementById('googleLoc').innerHTML = (locEn || displayLoc) + ' <span class="status pending" id="googleStatus">检测中...</span>';
+
+      document.getElementById('ytIp').textContent = displayIp;
+      document.getElementById('ytLoc').innerHTML = (locEn || displayLoc) + ' <span class="status pending" id="ytStatus">检测中...</span>';
+
+      document.getElementById('aiIp').textContent = displayIp;
+      document.getElementById('aiLoc').innerHTML = `
+        <span class="status pending" id="geminiStatus">Gemini</span>
+        <span class="status pending" id="grokStatus">Grok</span>
+        <span class="status pending" id="chatgptStatus">ChatGPT</span>
+        <div style="margin-top:0.3rem;font-size:0.85rem;">${locEn || displayLoc}</div>
+      `;
+    }
+    loadPublicIPs().then(() => {
+      checkConnectivity();
+    });
+
+    // ========== 连通性检测 (图片/无 CORS 方式) ==========
+    function checkSite(url, statusId, label) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const timer = setTimeout(() => {
+          img.src = '';
+          const el = document.getElementById(statusId);
+          if (el) {
+            el.className = 'status fail';
+            el.textContent = label + ' 不可达';
+          }
+          resolve(false);
+        }, 4000);
+        img.onload = img.onerror = () => {
+          // 多数情况下 onerror 也会触发（跨域），但只要有响应就说明网络可达
+          clearTimeout(timer);
+          const el = document.getElementById(statusId);
+          if (el) {
+            el.className = 'status ok';
+            el.textContent = label + ' 可达';
+          }
+          resolve(true);
+        };
+        // 使用带随机参数避免缓存，并尽量触发网络请求
+        img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      });
+    }
+
+    async function checkConnectivity() {
+      // Google
+      await checkSite('https://www.google.com/favicon.ico', 'googleStatus', 'Google');
+      // YouTube
+      await checkSite('https://www.youtube.com/favicon.ico', 'ytStatus', 'YouTube');
+      // AI sites
+      await checkSite('https://gemini.google.com/favicon.ico', 'geminiStatus', 'Gemini');
+      await checkSite('https://grok.x.ai/favicon.ico', 'grokStatus', 'Grok');
+      await checkSite('https://chatgpt.com/favicon.ico', 'chatgptStatus', 'ChatGPT');
+    }
+
+    // 每 10 分钟自动刷新页面（更新天气、IP、连通性等）
+    setTimeout(function () {
+      location.reload();
+    }, 10 * 60 * 1000);
+  </script>
+</body>
+</html>

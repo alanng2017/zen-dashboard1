@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5a6b8a">
+  <title>NOTE · 笔记</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%235a6b8a'/><text y='.9em' x='50%' text-anchor='middle' font-size='60' fill='%23f7f3e9'>禅</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --accent: #5a6b8a;
+      --mist: rgba(255,255,255,0.88);
+      --shadow: rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif SC', serif;
+      background: linear-gradient(180deg, #e8eef5 0%, #f5f3ef 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 1.5rem 1rem 3rem;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.2em;
+    }
+    .back {
+      display: block;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .back:hover { text-decoration: underline; }
+    .card {
+      background: var(--mist);
+      border: 1px solid rgba(90,107,138,0.25);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 3px 14px var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
+    }
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    button {
+      padding: 0.55rem 1.1rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+    button:hover { background: #4a5a7a; }
+    button.secondary {
+      background: #7a8a9a;
+    }
+    button.secondary:hover { background: #6a7a8a; }
+    button.danger {
+      background: #a33;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+    }
+    button.danger:hover { background: #822; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .note-item {
+      padding: 0.9rem 0.6rem;
+      border-bottom: 1px dashed rgba(90,107,138,0.2);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .note-item:hover { background: rgba(90,107,138,0.06); }
+    .note-item:last-child { border-bottom: none; }
+    .note-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+    .note-preview {
+      font-size: 0.85rem;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .note-meta {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 0.2rem;
+    }
+    .empty {
+      text-align: center;
+      color: #888;
+      padding: 1.5rem;
+      font-size: 0.95rem;
+    }
+    .hint {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.5rem;
+    }
+    /* 编辑弹层 */
+    #editModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      padding: 1rem;
+    }
+    #editModal.show { display: flex; }
+    .edit-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .edit-box h3 {
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 0.8rem;
+    }
+    /* 密码遮罩 */
+    #lockOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(232,238,245,0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    #lockOverlay.hidden { display: none; }
+    .lock-box {
+      background: var(--mist);
+      border: 1px solid rgba(90,107,138,0.3);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+    .lock-box h2 {
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      font-size: 1.3rem;
+    }
+    .lock-box p {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 1.2rem;
+    }
+    .lock-box input {
+      width: 100%;
+      margin-bottom: 0.8rem;
+      text-align: center;
+      letter-spacing: 0.1em;
+    }
+    .lock-box .error {
+      color: #a33;
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+      min-height: 1.2em;
+    }
+    .main-content.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="lockOverlay">
+    <div class="lock-box">
+      <h2 id="lockTitle">NOTE · 解锁</h2>
+      <p id="lockDesc">请输入密码以查看笔记</p>
+      <div class="error" id="lockError"></div>
+      <input type="password" id="lockPwd" placeholder="输入密码" autocomplete="current-password">
+      <input type="password" id="lockPwd2" placeholder="再次确认密码" style="display:none;" autocomplete="new-password">
+      <button id="lockBtn" onclick="handleLockAction()" style="width:100%;margin-top:0.3rem;">解锁</button>
+      <p class="hint" id="lockHint" style="margin-top:1rem;"></p>
+    </div>
+  </div>
+
+  <div class="container main-content hidden" id="mainContent">
+    <h1>NOTE · 笔记</h1>
+    <a href="index.html" class="back">← 返回首页</a>
+
+    <div class="card">
+      <button onclick="openEdit(-1)">＋ 新建笔记</button>
+      <div class="toolbar">
+        <button class="secondary" onclick="exportData()">导出</button>
+        <button class="secondary" onclick="importData()">导入</button>
+        <button class="secondary" onclick="changePassword()">修改密码</button>
+        <button class="secondary" onclick="lockNow()">锁定</button>
+        <button class="danger" onclick="clearAll()">清除全部</button>
+      </div>
+      <div class="hint">笔记已加密保存在本浏览器。新设备请先导入备份，再用密码解锁。</div>
+    </div>
+
+    <div class="card">
+      <div id="noteList"></div>
+      <div class="empty" id="emptyTip">暂无笔记，点击上方「新建笔记」开始记录。</div>
+    </div>
+  </div>
+
+  <!-- 编辑弹窗 -->
+  <div id="editModal">
+    <div class="edit-box">
+      <h3 id="editTitle">新建笔记</h3>
+      <input type="text" id="noteTitle" placeholder="标题（可选）" maxlength="100">
+      <textarea id="noteContent" placeholder="在此写下你的想法..."></textarea>
+      <div class="edit-actions">
+        <button class="secondary" onclick="closeEdit()">取消</button>
+        <button class="danger" id="deleteBtn" onclick="deleteCurrent()" style="display:none;">删除</button>
+        <button onclick="saveNote()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== 配置 ==========
+    // 部署 Worker 后，把下面改成你的 Worker 地址
+    // const WORKER_URL = 'https://zen-sync.你的账号.workers.dev';
+    const WORKER_URL = '';
+
+    const PAGE = 'note';
+    const HASH_KEY = `zen_${PAGE}_pwd_hash`;
+    const DATA_KEY = `zen_${PAGE}_data`;
+    const SESSION_KEY = `zen_${PAGE}_unlocked`;
+
+    let currentPassword = null;
+    let notes = [];
+    let editingIndex = -1;
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function deriveKey(password) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: enc.encode('zen-dashboard-salt-v1'), iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encrypt(text, password) {
+      const key = await deriveKey(password);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encoded = new TextEncoder().encode(text);
+      const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+      const combined = new Uint8Array(iv.length + cipher.byteLength);
+      combined.set(iv);
+      combined.set(new Uint8Array(cipher), iv.length);
+      return btoa(String.fromCharCode(...combined));
+    }
+
+    async function decrypt(base64, password) {
+      const key = await deriveKey(password);
+      const combined = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const iv = combined.slice(0, 12);
+      const data = combined.slice(12);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+      return new TextDecoder().decode(plain);
+    }
+
+    function setUnlocked(pwd) {
+      currentPassword = pwd;
+      sessionStorage.setItem(SESSION_KEY, '1');
+    }
+
+    function lockNow() {
+      sessionStorage.removeItem(SESSION_KEY);
+      currentPassword = null;
+      location.reload();
+    }
+
+    async function hasPassword() {
+      if (localStorage.getItem(HASH_KEY)) return true;
+      if (WORKER_URL) {
+        try {
+          const res = await fetch(`${WORKER_URL}/api/${PAGE}`);
+          const obj = await res.json();
+          return !!(obj && obj.hash);
+        } catch { return false; }
+      }
+      return false;
+    }
+
+    async function loadNotes() {
+      if (!currentPassword) {
+        notes = [];
+        return;
+      }
+
+      let raw = null;
+
+      if (WORKER_URL) {
+        try {
+          const res = await fetch(`${WORKER_URL}/api/${PAGE}`);
+          if (res.ok) {
+            const obj = await res.json();
+            if (obj.data) {
+              raw = obj.data;
+              localStorage.setItem(DATA_KEY, raw);
+              if (obj.hash) localStorage.setItem(HASH_KEY, obj.hash);
+            }
+          }
+        } catch (e) {
+          console.warn('云端读取失败，使用本地缓存', e);
+        }
+      }
+
+      if (!raw) raw = localStorage.getItem(DATA_KEY);
+
+      if (!raw) {
+        notes = [];
+        return;
+      }
+
+      try {
+        const json = await decrypt(raw, currentPassword);
+        notes = JSON.parse(json);
+      } catch {
+        notes = [];
+        alert('数据解密失败，可能是密码错误或数据已损坏。');
+      }
+    }
+
+    async function saveNotes() {
+      if (!currentPassword) return;
+      const json = JSON.stringify(notes);
+      const encrypted = await encrypt(json, currentPassword);
+      const hash = await sha256(currentPassword);
+
+      localStorage.setItem(DATA_KEY, encrypted);
+      localStorage.setItem(HASH_KEY, hash);
+
+      if (WORKER_URL) {
+        try {
+          await fetch(`${WORKER_URL}/api/${PAGE}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hash, data: encrypted }),
+          });
+        } catch (e) {
+          console.warn('云端保存失败（本地已保存）', e);
+        }
+      }
+    }
+
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function render() {
+      const list = document.getElementById('noteList');
+      const empty = document.getElementById('emptyTip');
+      list.innerHTML = '';
+      if (notes.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      // 按更新时间倒序
+      const sorted = notes.map((n, i) => ({ ...n, _idx: i })).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+      sorted.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'note-item';
+        div.onclick = () => openEdit(item._idx);
+        const title = item.title || '（无标题）';
+        const preview = (item.content || '').replace(/\n/g, ' ').slice(0, 80);
+        div.innerHTML = `
+          <div class="note-title">${escapeHtml(title)}</div>
+          <div class="note-preview">${escapeHtml(preview) || '（空内容）'}</div>
+          <div class="note-meta">${formatTime(item.updated || item.created || Date.now())}</div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function openEdit(idx) {
+      editingIndex = idx;
+      const modal = document.getElementById('editModal');
+      const titleEl = document.getElementById('editTitle');
+      const titleInput = document.getElementById('noteTitle');
+      const contentInput = document.getElementById('noteContent');
+      const deleteBtn = document.getElementById('deleteBtn');
+
+      if (idx < 0) {
+        titleEl.textContent = '新建笔记';
+        titleInput.value = '';
+        contentInput.value = '';
+        deleteBtn.style.display = 'none';
+      } else {
+        titleEl.textContent = '编辑笔记';
+        titleInput.value = notes[idx].title || '';
+        contentInput.value = notes[idx].content || '';
+        deleteBtn.style.display = 'inline-block';
+      }
+      modal.classList.add('show');
+      titleInput.focus();
+    }
+
+    function closeEdit() {
+      document.getElementById('editModal').classList.remove('show');
+      editingIndex = -1;
+    }
+
+    async function saveNote() {
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value;
+      if (!title && !content.trim()) {
+        alert('标题和内容不能都为空');
+        return;
+      }
+      const now = Date.now();
+      if (editingIndex < 0) {
+        notes.push({ title, content, created: now, updated: now });
+      } else {
+        notes[editingIndex].title = title;
+        notes[editingIndex].content = content;
+        notes[editingIndex].updated = now;
+      }
+      await saveNotes();
+      closeEdit();
+      render();
+    }
+
+    async function deleteCurrent() {
+      if (editingIndex < 0) return;
+      if (!confirm('确定删除这篇笔记？')) return;
+      notes.splice(editingIndex, 1);
+      await saveNotes();
+      closeEdit();
+      render();
+    }
+
+    async function showLockUI() {
+      const overlay = document.getElementById('lockOverlay');
+      const title = document.getElementById('lockTitle');
+      const desc = document.getElementById('lockDesc');
+      const pwd2 = document.getElementById('lockPwd2');
+      const btn = document.getElementById('lockBtn');
+      const hint = document.getElementById('lockHint');
+      const hasPwd = await hasPassword();
+
+      if (!hasPwd) {
+        title.textContent = 'NOTE · 设置密码';
+        desc.textContent = '首次使用，请设置一个密码（用于加密保护笔记）';
+        pwd2.style.display = 'block';
+        btn.textContent = '设置密码并进入';
+        hint.textContent = '密码仅保存在本设备，请务必记住。';
+      } else {
+        title.textContent = 'NOTE · 解锁';
+        desc.textContent = '请输入密码以查看笔记';
+        pwd2.style.display = 'none';
+        btn.textContent = '解锁';
+        hint.textContent = '新设备或新浏览器需要重新输入密码。';
+      }
+      overlay.classList.remove('hidden');
+      document.getElementById('mainContent').classList.add('hidden');
+      document.getElementById('lockPwd').focus();
+    }
+
+    async function handleLockAction() {
+      const pwd = document.getElementById('lockPwd').value;
+      const pwd2 = document.getElementById('lockPwd2').value;
+      const err = document.getElementById('lockError');
+      err.textContent = '';
+
+      if (!pwd || pwd.length < 4) {
+        err.textContent = '密码至少 4 位';
+        return;
+      }
+
+      const hasPwd = await hasPassword();
+
+      if (!hasPwd) {
+        if (pwd !== pwd2) {
+          err.textContent = '两次密码不一致';
+          return;
+        }
+        const hash = await sha256(pwd);
+        localStorage.setItem(HASH_KEY, hash);
+        setUnlocked(pwd);
+        await loadNotes();
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        render();
+        return;
+      }
+
+      const stored = localStorage.getItem(HASH_KEY);
+      const hash = await sha256(pwd);
+      if (hash !== stored) {
+        err.textContent = '密码错误';
+        return;
+      }
+      setUnlocked(pwd);
+      await loadNotes();
+      document.getElementById('lockOverlay').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+      render();
+    }
+
+    async function changePassword() {
+      const oldPwd = prompt('请输入当前密码：');
+      if (!oldPwd) return;
+      const hash = await sha256(oldPwd);
+      if (hash !== localStorage.getItem(HASH_KEY)) {
+        alert('当前密码错误');
+        return;
+      }
+      const newPwd = prompt('请输入新密码（至少4位）：');
+      if (!newPwd || newPwd.length < 4) {
+        alert('新密码无效');
+        return;
+      }
+      const newPwd2 = prompt('请再次输入新密码：');
+      if (newPwd !== newPwd2) {
+        alert('两次新密码不一致');
+        return;
+      }
+      currentPassword = oldPwd;
+      await loadNotes();
+      const newHash = await sha256(newPwd);
+      localStorage.setItem(HASH_KEY, newHash);
+      currentPassword = newPwd;
+      await saveNotes();
+      alert('密码已修改成功');
+    }
+
+    function exportData() {
+      const data = localStorage.getItem(DATA_KEY);
+      const hash = localStorage.getItem(HASH_KEY);
+      if (!data) {
+        alert('暂无数据可导出');
+        return;
+      }
+      const payload = JSON.stringify({ page: PAGE, hash, data, version: 1 });
+      const blob = new Blob([payload], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `zen-${PAGE}-backup.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('已导出加密备份文件。请在其他设备使用「导入」功能，并使用相同密码解锁。');
+    }
+
+    function importData() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const obj = JSON.parse(text);
+          if (!obj.data || !obj.hash) throw new Error('格式错误');
+          if (!confirm('导入将覆盖当前本页数据，是否继续？')) return;
+          localStorage.setItem(DATA_KEY, obj.data);
+          localStorage.setItem(HASH_KEY, obj.hash);
+          alert('导入成功！请使用原密码解锁。');
+          location.reload();
+        } catch (err) {
+          alert('导入失败：' + err.message);
+        }
+      };
+      input.click();
+    }
+
+    async function clearAll() {
+      if (!confirm('确定清除本页所有笔记和密码？此操作不可恢复。')) return;
+      localStorage.removeItem(DATA_KEY);
+      localStorage.removeItem(HASH_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
+      location.reload();
+    }
+
+    document.getElementById('lockPwd').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (document.getElementById('lockPwd2').style.display !== 'none') {
+          document.getElementById('lockPwd2').focus();
+        } else {
+          handleLockAction();
+        }
+      }
+    });
+    document.getElementById('lockPwd2').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLockAction();
+    });
+
+    // 点击弹窗外关闭
+    document.getElementById('editModal').addEventListener('click', e => {
+      if (e.target.id === 'editModal') closeEdit();
+    });
+
+    showLockUI();
+  </script>
+</body>
+</html>
