@@ -246,9 +246,14 @@
         <div class="date-line" id="dateLine">加载中...</div>
       </div>
       <div class="card">
-        <h3>🌤 天气</h3>
-        <div class="weather-main" id="weatherMain">获取中...</div>
-        <div class="sub" id="weatherSub"></div>
+        <h3>🌤 天气 · 江苏启东</h3>
+        <div class="weather-main" id="weatherMain1">获取中...</div>
+        <div class="sub" id="weatherSub1"></div>
+      </div>
+      <div class="card">
+        <h3>🌤 天气 · 浙江金华</h3>
+        <div class="weather-main" id="weatherMain2">获取中...</div>
+        <div class="sub" id="weatherSub2"></div>
       </div>
     </div>
 
@@ -351,25 +356,29 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ========== 天气 (wttr.in) ==========
-    async function loadWeather() {
+    // ========== 天气 (wttr.in) 固定：江苏启东 + 浙江金华 ==========
+    const WEATHER_CITIES = [
+      { query: 'Qidong', main: 'weatherMain1', sub: 'weatherSub1' },
+      { query: 'Jinhua', main: 'weatherMain2', sub: 'weatherSub2' }
+    ];
+    async function loadOneWeather(cfg) {
       try {
-        const res = await fetch('https://wttr.in/?format=j1&lang=zh');
+        const res = await fetch(`https://wttr.in/${cfg.query}?format=j1&lang=zh`);
         const data = await res.json();
         const cur = data.current_condition[0];
-        const area = data.nearest_area[0];
         const temp = cur.temp_C;
         const desc = cur.lang_zh ? cur.lang_zh[0].value : cur.weatherDesc[0].value;
         const feels = cur.FeelsLikeC;
         const humidity = cur.humidity;
-        const city = area.areaName[0].value;
-        const region = area.region[0].value;
-        document.getElementById('weatherMain').textContent = `${temp}°C · ${desc}`;
-        document.getElementById('weatherSub').textContent = `${city}, ${region} · 体感 ${feels}°C · 湿度 ${humidity}%`;
+        document.getElementById(cfg.main).textContent = `${temp}°C · ${desc}`;
+        document.getElementById(cfg.sub).textContent = `体感 ${feels}°C · 湿度 ${humidity}%`;
       } catch (e) {
-        document.getElementById('weatherMain').textContent = '天气获取失败';
-        document.getElementById('weatherSub').textContent = '请检查网络或稍后重试';
+        document.getElementById(cfg.main).textContent = '天气获取失败';
+        document.getElementById(cfg.sub).textContent = '请检查网络或稍后重试';
       }
+    }
+    function loadWeather() {
+      WEATHER_CITIES.forEach(loadOneWeather);
     }
     loadWeather();
 

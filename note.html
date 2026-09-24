@@ -202,6 +202,8 @@
       min-height: 1.2em;
     }
     .main-content.hidden { display: none; }
+      .lock-back { display:inline-block; margin-top:1rem; color:#4a6741; text-decoration:none; font-size:0.9rem; opacity:0.8; }
+    .lock-back:hover { opacity:1; text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -213,6 +215,7 @@
       <input type="password" id="lockPwd" placeholder="输入密码" autocomplete="current-password">
       <input type="password" id="lockPwd2" placeholder="再次确认密码" style="display:none;" autocomplete="new-password">
       <button id="lockBtn" onclick="handleLockAction()" style="width:100%;margin-top:0.3rem;">解锁</button>
+      <a href="index.html" class="lock-back">← 返回主页</a>
       <p class="hint" id="lockHint" style="margin-top:1rem;"></p>
     </div>
   </div>
