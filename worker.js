@@ -25,6 +25,26 @@ export default {
       return json({ ok: true, service: 'zen-dashboard-sync' }, 200, request);
     }
 
+    // 访问者真实公网 IP（CF-Connecting-IP）
+    if (path === 'api/ip/me') {
+      const ip = request.headers.get('CF-Connecting-IP') || '';
+      return json({ ip }, 200, request);
+    }
+
+    // 国内归属地反查：浏览器直连 ip9 无 CORS 头，由 Worker 服务端转发
+    // GET /api/ip/cn?ip=1.2.3.4 → ip9 原样 JSON（已含 CORS）
+    if (path === 'api/ip/cn') {
+      const ip = url.searchParams.get('ip');
+      if (!ip) return json({ error: 'need ?ip=' }, 400, request);
+      try {
+        const r = await fetch(`https://ip9.com.cn/get?ip=${encodeURIComponent(ip)}`);
+        const j = await r.json();
+        return json(j, 200, request);
+      } catch (err) {
+        return json({ error: err.message || 'upstream fail' }, 502, request);
+      }
+    }
+
     // 只允许 /api/work  /api/life  /api/note
     const match = path.match(/^api\/(work|life|note)$/);
     if (!match) {

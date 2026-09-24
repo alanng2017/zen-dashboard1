@@ -246,6 +246,11 @@
         <div class="date-line" id="dateLine">加载中...</div>
       </div>
       <div class="card">
+        <h3>🇩🇪 德国时间 · 柏林</h3>
+        <div class="time-big" id="deClock">--:--:--</div>
+        <div class="date-line" id="deDateLine">加载中...</div>
+      </div>
+      <div class="card">
         <h3>🌤 天气 · 江苏启东</h3>
         <div class="weather-main" id="weatherMain1">获取中...</div>
         <div class="sub" id="weatherSub1"></div>
@@ -259,11 +264,6 @@
 
     <!-- 网络信息 -->
     <div class="grid">
-      <div class="card">
-        <h3>🏠 局域网地址</h3>
-        <div class="value" id="lanIp">检测中...</div>
-        <div class="sub">WebRTC 本地 IP</div>
-      </div>
       <div class="card">
         <h3>🇨🇳 国内网络 IP · 归属地</h3>
         <div class="value" id="cnIp">查询中...</div>
@@ -353,10 +353,29 @@
       const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${week}`;
       document.getElementById('dateLine').textContent = dateStr;
     }
+
+    // ========== 德国时间 · 柏林 (Europe/Berlin) ==========
+    function updateDeClock() {
+      const now = new Date();
+      const deFmt = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Europe/Berlin', hour12: false,
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const deDateFmt = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Europe/Berlin',
+        year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+      });
+      document.getElementById('deClock').textContent = deFmt.format(now);
+      document.getElementById('deDateLine').textContent = deDateFmt.format(now);
+    }
+    updateDeClock();
+    setInterval(updateDeClock, 1000);
     updateClock();
     setInterval(updateClock, 1000);
 
     // ========== 天气 (wttr.in) 固定：江苏启东 + 浙江金华 ==========
+    // wttr 的 lang=zh 翻译经常缺，用 weatherCode 映射兜底成中文
+    const WEATHER_ZH = {113:'晴',116:'多云',119:'阴',122:'阴',143:'薄雾',176:'小雨可能',179:'小雪可能',182:'雨夹雪可能',185:'冻毛毛雨可能',200:'雷阵雨可能',227:'吹雪',230:'暴风雪',248:'雾',260:'冻雾',263:'零星毛毛雨',266:'毛毛雨',281:'轻度冻毛毛雨',284:'强冻毛毛雨',293:'零星小雨',296:'小雨',299:'中雨',302:'中雨',305:'大雨',308:'大雨',311:'冻雨',314:'冻雨',317:'小雨夹雪',320:'雨夹雪',323:'零星小雪',326:'小雪',329:'中雪',332:'中雪',335:'大雪',338:'大雪',350:'冰粒',353:'零星阵雨',356:'阵雨',359:'大阵雨',362:'小雨夹冰雹',365:'雨夹冰雹',368:'零星阵雪',371:'阵雪',374:'大雨夹冰雹',377:'强雨夹冰雹',386:'雷阵雨',389:'强雷阵雨',392:'雷阵雪',395:'强雷阵雪'};
     const WEATHER_CITIES = [
       { query: 'Qidong', main: 'weatherMain1', sub: 'weatherSub1' },
       { query: 'Jinhua', main: 'weatherMain2', sub: 'weatherSub2' }
@@ -367,7 +386,10 @@
         const data = await res.json();
         const cur = data.current_condition[0];
         const temp = cur.temp_C;
-        const desc = cur.lang_zh ? cur.lang_zh[0].value : cur.weatherDesc[0].value;
+        let desc = cur.lang_zh ? cur.lang_zh[0].value : cur.weatherDesc[0].value;
+        if (!/[一-龥]/.test(desc) && cur.weatherCode && WEATHER_ZH[cur.weatherCode]) {
+          desc = WEATHER_ZH[cur.weatherCode];
+        }
         const feels = cur.FeelsLikeC;
         const humidity = cur.humidity;
         document.getElementById(cfg.main).textContent = `${temp}°C · ${desc}`;
@@ -382,38 +404,6 @@
     }
     loadWeather();
 
-    // ========== 局域网 IP (WebRTC) ==========
-    function getLocalIP() {
-      return new Promise((resolve) => {
-        const ips = new Set();
-        try {
-          const pc = new RTCPeerConnection({ iceServers: [] });
-          pc.createDataChannel('');
-          pc.onicecandidate = (e) => {
-            if (!e.candidate) {
-              pc.close();
-              resolve(Array.from(ips).join(', ') || '无法获取 (浏览器隐私限制)');
-              return;
-            }
-            const match = e.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
-            if (match && e.candidate.candidate.includes('typ host')) {
-              ips.add(match[1]);
-            }
-          };
-          pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => resolve('不支持'));
-          setTimeout(() => {
-            pc.close();
-            resolve(Array.from(ips).join(', ') || '超时 / 隐私限制');
-          }, 2000);
-        } catch (e) {
-          resolve('不支持 WebRTC');
-        }
-      });
-    }
-    getLocalIP().then(ip => {
-      document.getElementById('lanIp').textContent = ip;
-    });
-
     // ========== 公网 IP 与归属地 ==========
     // 使用多个源以提高兼容性
     async function fetchIpSb() {
@@ -424,15 +414,28 @@
       const res = await fetch('https://ipapi.co/json/');
       return await res.json();
     }
-    async function fetchIp9() {
+    // 国内卡：ip9.com.cn 浏览器直连无 CORS 头（实测），改由 Worker 中转
+    // 真实访客 IP 来自 CF-Connecting-IP，再反查国内归属地 → IP 与归属地同源
+    const WORKER_URL = 'https://zen-dashboard1.alanalan.workers.dev';
+    async function loadDomesticIP() {
+      let ip = '获取失败', loc = '未知';
       try {
-        const res = await fetch('https://ip9.com.cn/get');
-        return await res.json();
-      } catch { return null; }
+        const me = await (await fetch(`${WORKER_URL}/api/ip/me`)).json();
+        if (me.ip) {
+          ip = me.ip;
+          const cn = await (await fetch(`${WORKER_URL}/api/ip/cn?ip=${encodeURIComponent(me.ip)}`)).json();
+          if (cn.ret === 200 && cn.data) {
+            const d = cn.data;
+            loc = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ');
+          }
+        }
+      } catch (e) {}
+      document.getElementById('cnIp').textContent = ip;
+      document.getElementById('cnLoc').textContent = loc;
     }
 
     async function loadPublicIPs() {
-      let ip = '', locCn = '', locEn = '', country = '', city = '', isp = '';
+      let ip = '', locEn = '', country = '', city = '', isp = '';
       try {
         // 优先 ip.sb
         const data = await fetchIpSb();
@@ -454,22 +457,9 @@
         } catch {}
       }
 
-      // 尝试中文归属
-      try {
-        const cn = await fetchIp9();
-        if (cn && cn.ret === 200 && cn.data) {
-          const d = cn.data;
-          locCn = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ');
-          if (!ip) ip = d.ip;
-        }
-      } catch {}
-
-      // 填充所有卡片（当前出口 IP 相同）
+      // 国外/Google/YouTube/AI 卡：当前代理出口 IP（国内卡另走 Worker 真实 IP）
       const displayIp = ip || '获取失败';
-      const displayLoc = locCn || locEn || '未知';
-
-      document.getElementById('cnIp').textContent = displayIp;
-      document.getElementById('cnLoc').textContent = locCn || displayLoc;
+      const displayLoc = locEn || '未知';
 
       document.getElementById('foreignIp').textContent = displayIp;
       document.getElementById('foreignLoc').textContent = locEn || displayLoc;
@@ -491,6 +481,7 @@
     loadPublicIPs().then(() => {
       checkConnectivity();
     });
+    loadDomesticIP();
 
     // ========== 连通性检测 (图片/无 CORS 方式) ==========
     function checkSite(url, statusId, label) {
