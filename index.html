@@ -412,9 +412,26 @@
     // 国内卡：必须由浏览器直连国内接口取 IP（代理规则「绕过大陆」→ 真实 ISP IP）。
     // CF-Connecting-IP 在代理下只有落地 IP，取不到真实国内出口，故不用 /api/ip/me。
     // 国内纯 CORS 接口基本全挂，改用 JSONP 型；Worker 只做归属地细化。
-    function loadScript(src, ms = 6000) {
+    // ---- 公网 IPv4 校验：拒绝回环 / 私有 / 保留段 ----
+    function isPublicIPv4(ip) {
+      if (typeof ip !== 'string') return false;
+      const m = ip.trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (!m) return false;
+      const o = m.slice(1).map(Number);
+      if (o.some(n => n > 255)) return false;
+      const a = o[0], b = o[1];
+      if (a === 0 || a === 10 || a === 127) return false;
+      if (a === 169 && b === 254) return false;
+      if (a === 172 && b >= 16 && b <= 31) return false;
+      if (a === 192 && b === 168) return false;
+      if (a >= 224) return false;
+      return true;
+    }
+
+    function loadScript(src, ms = 6000, charset = '') {
       return new Promise((resolve, reject) => {
         const s = document.createElement('script');
+        if (charset) s.charset = charset;
         const t = setTimeout(() => { s.remove(); reject(new Error('timeout')); }, ms);
         s.src = src;
         s.onload = () => { clearTimeout(t); resolve(); };
@@ -423,39 +440,51 @@
       });
     }
 
+    // 源1（主）：太平洋电脑网。服务端回调名硬编码为 IPCallBack，忽略 callback 参数，
+    // 且带 callback/json 参数会 503 —— 必须裸调 ipJson.jsp。GBK 编码，只取 ASCII 的 .ip。
+    function cnIpFromPconline() {
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = v => { if (!done) { done = true; resolve(v); } };
+        window.IPCallBack = d => finish(d && isPublicIPv4(d.ip) ? d.ip : null);
+        window.ipCallBack = window.IPCallBack;
+        loadScript('https://whois.pconline.com.cn/ipJson.jsp?t=' + Date.now(), 5000, 'gbk')
+          .catch(() => finish(null));
+        setTimeout(() => finish(null), 5500);
+      });
+    }
+
+    // 源2（兜底）：搜狐 —— 实测其海外节点返回 127.0.0.1，必须校验公网 IP
+    async function cnIpFromSohu() {
+      try {
+        await loadScript('https://pv.sohu.com/cityjson?ie=utf-8&t=' + Date.now(), 5000);
+        const cip = window.returnCitySN && window.returnCitySN.cip;
+        return isPublicIPv4(cip) ? cip : null;
+      } catch (e) { return null; }
+    }
+
     async function getCnIpDirect() {
-      try {   // 源1：搜狐
-        await loadScript('https://pv.sohu.com/cityjson?ie=utf-8&t=' + Date.now());
-        if (window.returnCitySN && window.returnCitySN.cip) {
-          return { ip: window.returnCitySN.cip, hint: window.returnCitySN.cname || '' };
-        }
-      } catch (e) {}
-      try {   // 源2：太平洋电脑网 JSONP
-        const d = await new Promise((resolve, reject) => {
-          window.__pcCb = resolve;
-          loadScript('https://whois.pconline.com.cn/ipJson.jsp?json=true&callback=__pcCb&t=' + Date.now()).catch(reject);
-        });
-        if (d && d.ip) return { ip: d.ip, hint: [d.pro, d.city].filter(Boolean).join('') };
-      } catch (e) {}
-      return null;
+      const p = await cnIpFromPconline();
+      if (p) return p;
+      return await cnIpFromSohu();
     }
 
     async function loadDomesticIP() {
       let ip = '获取失败', loc = '未知';
-      try {
-        const direct = await getCnIpDirect();
-        if (direct && direct.ip) {
-          ip = direct.ip;
-          loc = direct.hint || '';
-          try {
-            const cn = await (await fetch(`${WORKER_URL}/api/ip/cn?ip=${encodeURIComponent(direct.ip)}`)).json();
-            if (cn.ret === 200 && cn.data) {
-              const d = cn.data;
-              loc = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ') || loc;
-            }
-          } catch (e) {}
-        }
-      } catch (e) {}
+      const realIp = await getCnIpDirect();
+      if (realIp) {
+        ip = realIp;
+        try {   // 归属地：Worker 端百度地图 + ip-api 双源，UTF-8 中文
+          const cn = await (await fetch(`${WORKER_URL}/api/ip/cn?ip=${encodeURIComponent(realIp)}`)).json();
+          if (cn && cn.ret === 200 && cn.data) {
+            const d = cn.data;
+            loc = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ') || '未知';
+          }
+        } catch (e) {}
+        if (loc === '未知') loc = '（归属地查询失败）';
+      } else {
+        loc = '未取到真实国内 IP —— 请确认代理规则「绕过大陆」含 pconline.com.cn 与 sohu.com';
+      }
       document.getElementById('cnIp').textContent = ip;
       document.getElementById('cnLoc').textContent = loc;
     }
