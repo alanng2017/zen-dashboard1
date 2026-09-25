@@ -278,7 +278,7 @@
         try {
           const res = await fetch(`${WORKER_URL}/api/${PAGE}`);
           const obj = await res.json();
-          return !!(obj && obj.hash);
+          return !!(obj && (obj.hash || obj.pwd_hash));
         } catch { return false; }
       }
       return false;
@@ -446,12 +446,18 @@
         return;
       }
 
-      const stored = localStorage.getItem(HASH_KEY);
+      // 以服务端全局密码 hash 为准；服务端没配则退回 KV hash + 本地缓存
+      let cloud = null;
+      try { const r = await fetch(`${WORKER_URL}/api/${PAGE}`); cloud = await r.json(); } catch {}
+      const serverHash = cloud && cloud.pwd_hash;
       const hash = await sha256(pwd);
-      if (hash !== stored) {
-        err.textContent = '密码错误';
-        return;
+      if (serverHash) {
+        if (hash !== serverHash) { err.textContent = '密码错误'; return; }
+      } else {
+        const stored = localStorage.getItem(HASH_KEY) || (cloud && cloud.hash);
+        if (hash !== stored) { err.textContent = '密码错误'; return; }
       }
+      localStorage.setItem(HASH_KEY, serverHash || hash);
       setUnlocked(pwd);
       await loadLinks();
       document.getElementById('lockOverlay').classList.add('hidden');
@@ -459,7 +465,12 @@
       render();
     }
 
+    // 密码已由 Cloudflare 变量统一管理，页面不再支持改密
     async function changePassword() {
+      alert('密码已由服务器统一管理。请到 Cloudflare 修改 Worker 变量 password 后重新部署。');
+    }
+
+    async function changePasswordDisabled() {
       const oldPwd = prompt('请输入当前密码：');
       if (!oldPwd) return;
       const hash = await sha256(oldPwd);
@@ -559,6 +570,21 @@
     (async () => {
       const pwd = localStorage.getItem(SHARED_PWD_KEY);
       if (pwd) {
+        // 本地缓存的全局密码先跟服务端 hash 比对，不匹配直接作废（修：换设备/旧缓存哈希不一致）
+        let bad = false;
+        try {
+          const r = await fetch(`${WORKER_URL}/api/${PAGE}`);
+          const c = await r.json();
+          const h = await sha256(pwd);
+          if (c && c.pwd_hash && h !== c.pwd_hash) bad = true;
+          if (c && (c.pwd_hash || c.hash)) localStorage.setItem(HASH_KEY, c.pwd_hash || c.hash);
+        } catch {}
+        if (bad) {
+          localStorage.removeItem(SHARED_PWD_KEY);
+          sessionStorage.removeItem(SESSION_KEY);
+          showLockUI();
+          return;
+        }
         currentPassword = pwd;
         if (!localStorage.getItem(HASH_KEY)) {
           localStorage.setItem(HASH_KEY, await sha256(pwd));

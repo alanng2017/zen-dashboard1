@@ -13,6 +13,13 @@
  *   /api/work|life|note  → KV 读写
  */
 
+// 全局密码：Cloudflare 变量 password（明文只存 CF 侧，不进响应、不进日志）
+// GET 只返回它的 sha256，与 KV 里既有 hash 同级别，不新增泄露
+async function sha256Hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default {
   async fetch(request, env) {
     // CORS 预检
@@ -123,12 +130,13 @@ export default {
 
     try {
       if (request.method === 'GET') {
+        const pwdHash = env.password ? await sha256Hex(env.password) : null;
         const raw = await env.ZEN_KV.get(key);
         if (!raw) {
-          return json({ hash: null, data: null }, 200, request);
+          return json({ hash: null, data: null, pwd_hash: pwdHash }, 200, request);
         }
         const obj = JSON.parse(raw);
-        return json({ hash: obj.hash || null, data: obj.data || null }, 200, request);
+        return json({ hash: obj.hash || null, data: obj.data || null, pwd_hash: pwdHash }, 200, request);
       }
 
       if (request.method === 'PUT') {
@@ -139,8 +147,9 @@ export default {
         if (body.data.length > 500000) {
           return json({ error: 'Data too large (max ~500KB)' }, 413, request);
         }
+        // 密码由 CF 变量统一管理：写入时强制用服务端 hash，禁止前端自带 hash 落库
         await env.ZEN_KV.put(key, JSON.stringify({
-          hash: body.hash,
+          hash: env.password ? await sha256Hex(env.password) : body.hash,
           data: body.data,
           updated: Date.now(),
         }));
