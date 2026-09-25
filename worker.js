@@ -110,8 +110,8 @@ export default {
       return json({ error: 'all lookups failed' }, 502, request);
     }
 
-    // 只允许 /api/work  /api/life  /api/note
-    const match = path.match(/^api\/(work|life|note)$/);
+    // 只允许 /api/work  /api/life  /api/note  /api/ai
+    const match = path.match(/^api\/(work|life|note|ai)$/);
     if (!match) {
       // 非 API 路径 → 回退到静态资源
       if (env.ASSETS) return env.ASSETS.fetch(request);
