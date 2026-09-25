@@ -31,18 +31,56 @@ export default {
       return json({ ip }, 200, request);
     }
 
-    // 国内归属地反查：浏览器直连 ip9 无 CORS 头，由 Worker 服务端转发
-    // GET /api/ip/cn?ip=1.2.3.4 → ip9 原样 JSON（已含 CORS）
+    // 国内归属地反查：浏览器直连无 CORS 头，由 Worker 服务端转发
+    // GET /api/ip/cn?ip=1.2.3.4 → 百度地图 API + ip-api.com 双源解析
     if (path === 'api/ip/cn') {
       const ip = url.searchParams.get('ip');
       if (!ip) return json({ error: 'need ?ip=' }, 400, request);
+
+      // 源1：百度地图 API（稳定，无需 token）
       try {
-        const r = await fetch(`https://ip9.com.cn/get?ip=${encodeURIComponent(ip)}`);
+        const r = await fetch(`https://opendata.baidu.com/api.php?query=${ip}&co=&resource_id=6006&oe=utf8`);
         const j = await r.json();
-        return json(j, 200, request);
+        if (j.status === '0' && j.data && j.data.length > 0) {
+          const d = j.data[0];
+          // 百度返回：location: "北京市 海淀区 电信"
+          const parts = (d.location || '').split(' ');
+          return json({
+            ret: 200,
+            data: {
+              country: '中国',
+              prov: parts[0] || '',
+              city: parts[1] || '',
+              area: parts.slice(2).join(' ') || '',
+              isp: ''
+            }
+          }, 200, request);
+        }
       } catch (err) {
-        return json({ error: err.message || 'upstream fail' }, 502, request);
+        // 百度失败，尝试 ip-api.com
       }
+
+      // 源2：ip-api.com（更精确，但偶发超时）
+      try {
+        const r = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
+        const j = await r.json();
+        if (j.status === 'success') {
+          return json({
+            ret: 200,
+            data: {
+              country: j.country || '中国',
+              prov: j.regionName || '',
+              city: j.city || '',
+              area: '',
+              isp: j.isp || ''
+            }
+          }, 200, request);
+        }
+      } catch (err) {
+        // 都失败
+      }
+
+      return json({ error: 'all lookups failed' }, 502, request);
     }
 
     // 只允许 /api/work  /api/life  /api/note
