@@ -1,0 +1,13 @@
+name = "zen-dashboard1"
+main = "worker.js"
+compatibility_date = "2026-09-23"
+account_id = "79628532ca790fda5789bc6e332bdb9d"
+
+# 前端静态页 + API 同域托管（自定义域 m.1024m.bond）
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "ZEN_KV"
+id = "e1781e4d364c44f6853de4c5ed485240"
