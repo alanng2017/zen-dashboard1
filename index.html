@@ -416,7 +416,7 @@
     }
     // 国内卡：ip9.com.cn 浏览器直连无 CORS 头（实测），改由 Worker 中转
     // 真实访客 IP 来自 CF-Connecting-IP，再反查国内归属地 → IP 与归属地同源
-    const WORKER_URL = 'https://m.1024m.bond';
+    const WORKER_URL = 'https://api.m.1024m.bond';
     async function loadDomesticIP() {
       let ip = '获取失败', loc = '未知';
       try {
