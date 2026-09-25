@@ -16,8 +16,9 @@
 # 静态资源长期缓存（如果以后加 css/js/图片）
 /*.css
   Cache-Control: public, max-age=31536000, immutable
+# JS 不缓存（含 cols.js 等会变动的脚本）
 /*.js
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache, must-revalidate
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
 /*.png

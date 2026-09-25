@@ -444,36 +444,85 @@
       });
     }
 
+    // 通用 IP 抽取：不猜字段名，递归找第一个公网 IPv4，免疫上游改结构
+    function findPublicIp(o, depth) {
+      depth = depth || 0;
+      if (depth > 5 || o == null) return null;
+      if (typeof o === 'string') return isPublicIPv4(o) ? o : null;
+      if (Array.isArray(o)) {
+        for (const v of o) { const r = findPublicIp(v, depth + 1); if (r) return r; }
+        return null;
+      }
+      if (typeof o === 'object') {
+        for (const k in o) { const r = findPublicIp(o[k], depth + 1); if (r) return r; }
+      }
+      return null;
+    }
+
+    const cnIpLog = [];
+
+    // 源0：CORS 型接口（有 ACAO * 才走通；失败/超时不阻断后续 JSONP 源）
+    async function fetchWithTimeout(url, ms) {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), ms);
+      try { return await (await fetch(url, { cache: 'no-store', signal: ac.signal })).json(); }
+      finally { clearTimeout(t); }
+    }
+
+    async function cnIpByFetch() {
+      const list = [
+        ['bilibili',  'https://api.bilibili.com/x/web-interface/zone'],
+        ['ipip',      'https://myip.ipip.net/json'],
+        ['speedtest', 'https://forge.speedtest.cn/api/location/info']
+      ];
+      for (const pair of list) {
+        const name = pair[0], url = pair[1];
+        try {
+          const d = await fetchWithTimeout(url, 4000);
+          const ip = findPublicIp(d);
+          cnIpLog.push(name + (ip ? ':ok' : ':no-ip'));
+          if (ip) return ip;
+        } catch (e) { cnIpLog.push(name + ':' + (e.name === 'AbortError' ? 'timeout' : 'err')); }
+      }
+      return null;
+    }
+
     // 源1（主）：太平洋电脑网。服务端回调名硬编码为 IPCallBack，忽略 callback 参数，
-    // 且带 callback/json 参数会 503 —— 必须裸调 ipJson.jsp。GBK 编码，只取 ASCII 的 .ip。
+    // 且带未知 query（含 ?t= 时间戳）会吃 Tengine 503 —— 必须裸调 ipJson.jsp。GBK，只取 .ip
     function cnIpFromPconline() {
       return new Promise((resolve) => {
         let done = false;
         const finish = v => { if (!done) { done = true; resolve(v); } };
         window.IPCallBack = d => finish(d && isPublicIPv4(d.ip) ? d.ip : null);
         window.ipCallBack = window.IPCallBack;
-        loadScript('https://whois.pconline.com.cn/ipJson.jsp?t=' + Date.now(), 5000, 'gbk')
+        loadScript('https://whois.pconline.com.cn/ipJson.jsp', 6000, 'gbk')
           .catch(() => finish(null));
-        setTimeout(() => finish(null), 5500);
+        setTimeout(() => finish(null), 6500);
       });
     }
 
     // 源2（兜底）：搜狐 —— 实测其海外节点返回 127.0.0.1，必须校验公网 IP
     async function cnIpFromSohu() {
       try {
-        await loadScript('https://pv.sohu.com/cityjson?ie=utf-8&t=' + Date.now(), 5000);
+        await loadScript('https://pv.sohu.com/cityjson?ie=utf-8', 5000);
         const cip = window.returnCitySN && window.returnCitySN.cip;
         return isPublicIPv4(cip) ? cip : null;
       } catch (e) { return null; }
     }
 
+    // 三层链：CORS 型 → pconline JSONP（裸调）→ 搜狐兜底
     async function getCnIpDirect() {
-      const p = await cnIpFromPconline();
-      if (p) return p;
-      return await cnIpFromSohu();
+      cnIpLog.length = 0;
+      let ip = await cnIpByFetch();
+      if (!ip) ip = await cnIpFromPconline();
+      if (!ip) ip = await cnIpFromSohu();
+      return ip;
     }
 
     async function loadDomesticIP() {
+      const ipEl = document.getElementById('cnIp');
+      const locEl = document.getElementById('cnLoc');
+      ipEl.textContent = '检测中…'; locEl.textContent = '';
       let ip = '获取失败', loc = '未知';
       const realIp = await getCnIpDirect();
       if (realIp) {
@@ -487,10 +536,13 @@
         } catch (e) {}
         if (loc === '未知') loc = '（归属地查询失败）';
       } else {
-        loc = '未取到真实国内 IP —— 请确认代理规则「绕过大陆」含 pconline.com.cn 与 sohu.com';
+        loc = '三层源全失败　来源: ' + (cnIpLog.join(' | ') || '无') + '　（点 IP 重试）';
       }
-      document.getElementById('cnIp').textContent = ip;
-      document.getElementById('cnLoc').textContent = loc;
+      ipEl.textContent = ip;
+      locEl.textContent = loc;
+      ipEl.style.cursor = 'pointer';
+      ipEl.title = '点击重新检测';
+      ipEl.onclick = loadDomesticIP;
     }
 
     // 国外卡：走代理时出口即代理落地 IP；ipwho.is 实测 ACAO * 且带完整 geo
