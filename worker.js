@@ -31,6 +31,27 @@ export default {
       return json({ ok: true, service: 'zen-dashboard-sync' }, 200, request);
     }
 
+    // 天气中转：wttr.in 属境外，国内浏览器直连易超时，由 Worker 代理
+    // GET /api/weather?city=Qidong,Jiangsu,China
+    if (path === 'api/weather') {
+      const city = url.searchParams.get('city') || 'Qidong,Jiangsu,China';
+      try {
+        const r = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
+        if (!r.ok) return json({ error: 'weather upstream ' + r.status }, 502, request);
+        const j = await r.json();
+        const c = (j.current_condition && j.current_condition[0]) || {};
+        return json({
+          temp: c.temp_C,
+          code: c.weatherCode,
+          feels: c.FeelsLikeC,
+          humidity: c.humidity,
+          desc: (c.weatherDesc && c.weatherDesc[0] && c.weatherDesc[0].value) || '',
+        }, 200, request);
+      } catch (err) {
+        return json({ error: 'weather upstream failed' }, 502, request);
+      }
+    }
+
     // 访问者真实公网 IP（CF-Connecting-IP）
     if (path === 'api/ip/me') {
       const ip = request.headers.get('CF-Connecting-IP') || '';

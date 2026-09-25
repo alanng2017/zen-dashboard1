@@ -5,13 +5,13 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   X-XSS-Protection: 1; mode=block
 
-# HTML 文件短缓存，方便更新
+# HTML 不缓存，避免更新后看到旧页
 /*.html
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 # 根路径
 /
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 # 静态资源长期缓存（如果以后加 css/js/图片）
 /*.css

@@ -266,6 +266,8 @@
     const HASH_KEY = `zen_${PAGE}_pwd_hash`;
     const DATA_KEY = `zen_${PAGE}_data`;
     const SESSION_KEY = `zen_${PAGE}_unlocked`;
+    // 跨页共享解锁：同一浏览器一次解锁，work/life/note 通用；点「锁定」才失效
+    const SHARED_PWD_KEY = 'zen_shared_pwd';
 
     let currentPassword = null;
     let notes = [];
@@ -312,10 +314,12 @@
 
     function setUnlocked(pwd) {
       currentPassword = pwd;
+      localStorage.setItem(SHARED_PWD_KEY, pwd);
       sessionStorage.setItem(SESSION_KEY, '1');
     }
 
     function lockNow() {
+      localStorage.removeItem(SHARED_PWD_KEY);
       sessionStorage.removeItem(SESSION_KEY);
       currentPassword = null;
       location.reload();
@@ -579,6 +583,7 @@
       localStorage.setItem(HASH_KEY, newHash);
       currentPassword = newPwd;
       await saveNotes();
+      localStorage.setItem(SHARED_PWD_KEY, newPwd);
       alert('密码已修改成功');
     }
 
@@ -649,7 +654,22 @@
       if (e.target.id === 'editModal') closeEdit();
     });
 
-    showLockUI();
+    // 初始化：跨页共享解锁 —— 有共享密码则直接进入，无需再输
+    (async () => {
+      const pwd = localStorage.getItem(SHARED_PWD_KEY);
+      if (pwd) {
+        currentPassword = pwd;
+        if (!localStorage.getItem(HASH_KEY)) {
+          localStorage.setItem(HASH_KEY, await sha256(pwd));
+        }
+        await loadNotes();
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        render();
+        return;
+      }
+      showLockUI();
+    })();
   </script>
 </body>
 </html>

@@ -345,13 +345,17 @@
     // ========== 时钟 ==========
     function updateClock() {
       const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
-      const week = ['日','一','二','三','四','五','六'][now.getDay()];
-      const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${week}`;
-      document.getElementById('dateLine').textContent = dateStr;
+      // 北京时间固定 UTC+8，不能用设备本地时区
+      const t = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai', hour12: false,
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }).format(now);
+      const d = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+      }).format(now);
+      document.getElementById('clock').textContent = t;
+      document.getElementById('dateLine').textContent = d;
     }
 
     // ========== 德国时间 · 柏林 (Europe/Berlin) ==========
@@ -373,27 +377,27 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ========== 天气 (wttr.in) 固定：江苏启东 + 浙江金华 ==========
+    // ========== 与 Worker 同源：页面与 API 同一域名 ==========
+    const WORKER_URL = 'https://m.1024m.bond';
+
+    // ========== 天气 固定：江苏启东 + 浙江金华（经 Worker 中转 → 中文）==========
     // wttr 的 lang=zh 翻译经常缺，用 weatherCode 映射兜底成中文
     const WEATHER_ZH = {113:'晴',116:'多云',119:'阴',122:'阴',143:'薄雾',176:'小雨可能',179:'小雪可能',182:'雨夹雪可能',185:'冻毛毛雨可能',200:'雷阵雨可能',227:'吹雪',230:'暴风雪',248:'雾',260:'冻雾',263:'零星毛毛雨',266:'毛毛雨',281:'轻度冻毛毛雨',284:'强冻毛毛雨',293:'零星小雨',296:'小雨',299:'中雨',302:'中雨',305:'大雨',308:'大雨',311:'冻雨',314:'冻雨',317:'小雨夹雪',320:'雨夹雪',323:'零星小雪',326:'小雪',329:'中雪',332:'中雪',335:'大雪',338:'大雪',350:'冰粒',353:'零星阵雨',356:'阵雨',359:'大阵雨',362:'小雨夹冰雹',365:'雨夹冰雹',368:'零星阵雪',371:'阵雪',374:'大雨夹冰雹',377:'强雨夹冰雹',386:'雷阵雨',389:'强雷阵雨',392:'雷阵雪',395:'强雷阵雪'};
     const WEATHER_CITIES = [
-      { query: 'Qidong', main: 'weatherMain1', sub: 'weatherSub1' },
-      { query: 'Jinhua', main: 'weatherMain2', sub: 'weatherSub2' }
+      { query: 'Qidong,Jiangsu,China', main: 'weatherMain1', sub: 'weatherSub1' },
+      { query: 'Jinhua,Zhejiang,China', main: 'weatherMain2', sub: 'weatherSub2' }
     ];
     async function loadOneWeather(cfg) {
       try {
-        const res = await fetch(`https://wttr.in/${cfg.query}?format=j1&lang=zh`);
+        const res = await fetch(`${WORKER_URL}/api/weather?city=${encodeURIComponent(cfg.query)}`);
         const data = await res.json();
-        const cur = data.current_condition[0];
-        const temp = cur.temp_C;
-        let desc = cur.lang_zh ? cur.lang_zh[0].value : cur.weatherDesc[0].value;
-        if (!/[一-龥]/.test(desc) && cur.weatherCode && WEATHER_ZH[cur.weatherCode]) {
-          desc = WEATHER_ZH[cur.weatherCode];
+        if (!res.ok || data.error) throw new Error(data.error || 'upstream');
+        let desc = data.desc || '';
+        if (!/[一-龥]/.test(desc) && data.code && WEATHER_ZH[data.code]) {
+          desc = WEATHER_ZH[data.code];
         }
-        const feels = cur.FeelsLikeC;
-        const humidity = cur.humidity;
-        document.getElementById(cfg.main).textContent = `${temp}°C · ${desc}`;
-        document.getElementById(cfg.sub).textContent = `体感 ${feels}°C · 湿度 ${humidity}%`;
+        document.getElementById(cfg.main).textContent = `${data.temp}°C · ${desc}`;
+        document.getElementById(cfg.sub).textContent = `体感 ${data.feels}°C · 湿度 ${data.humidity}%`;
       } catch (e) {
         document.getElementById(cfg.main).textContent = '天气获取失败';
         document.getElementById(cfg.sub).textContent = '请检查网络或稍后重试';
@@ -404,122 +408,121 @@
     }
     loadWeather();
 
-    // ========== 公网 IP 与归属地 ==========
-    // 使用多个源以提高兼容性
-    async function fetchIpSb() {
-      const res = await fetch('https://api.ip.sb/geoip');
-      return await res.json();
+    // ========== IP 与归属地 ==========
+    // 国内卡：必须由浏览器直连国内接口取 IP（代理规则「绕过大陆」→ 真实 ISP IP）。
+    // CF-Connecting-IP 在代理下只有落地 IP，取不到真实国内出口，故不用 /api/ip/me。
+    // 国内纯 CORS 接口基本全挂，改用 JSONP 型；Worker 只做归属地细化。
+    function loadScript(src, ms = 6000) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        const t = setTimeout(() => { s.remove(); reject(new Error('timeout')); }, ms);
+        s.src = src;
+        s.onload = () => { clearTimeout(t); resolve(); };
+        s.onerror = () => { clearTimeout(t); reject(new Error('load fail')); };
+        document.head.appendChild(s);
+      });
     }
-    async function fetchIpApiCo() {
-      const res = await fetch('https://ipapi.co/json/');
-      return await res.json();
+
+    async function getCnIpDirect() {
+      try {   // 源1：搜狐
+        await loadScript('https://pv.sohu.com/cityjson?ie=utf-8&t=' + Date.now());
+        if (window.returnCitySN && window.returnCitySN.cip) {
+          return { ip: window.returnCitySN.cip, hint: window.returnCitySN.cname || '' };
+        }
+      } catch (e) {}
+      try {   // 源2：太平洋电脑网 JSONP
+        const d = await new Promise((resolve, reject) => {
+          window.__pcCb = resolve;
+          loadScript('https://whois.pconline.com.cn/ipJson.jsp?json=true&callback=__pcCb&t=' + Date.now()).catch(reject);
+        });
+        if (d && d.ip) return { ip: d.ip, hint: [d.pro, d.city].filter(Boolean).join('') };
+      } catch (e) {}
+      return null;
     }
-    // 国内卡：ip9.com.cn 浏览器直连无 CORS 头（实测），改由 Worker 中转
-    // 真实访客 IP 来自 CF-Connecting-IP，再反查国内归属地 → IP 与归属地同源
-    const WORKER_URL = 'https://m.1024m.bond';
+
     async function loadDomesticIP() {
       let ip = '获取失败', loc = '未知';
       try {
-        const me = await (await fetch(`${WORKER_URL}/api/ip/me`)).json();
-        if (me.ip) {
-          ip = me.ip;
-          const cn = await (await fetch(`${WORKER_URL}/api/ip/cn?ip=${encodeURIComponent(me.ip)}`)).json();
-          if (cn.ret === 200 && cn.data) {
-            const d = cn.data;
-            loc = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ');
-          }
+        const direct = await getCnIpDirect();
+        if (direct && direct.ip) {
+          ip = direct.ip;
+          loc = direct.hint || '';
+          try {
+            const cn = await (await fetch(`${WORKER_URL}/api/ip/cn?ip=${encodeURIComponent(direct.ip)}`)).json();
+            if (cn.ret === 200 && cn.data) {
+              const d = cn.data;
+              loc = [d.country, d.prov, d.city, d.area, d.isp].filter(Boolean).join(' · ') || loc;
+            }
+          } catch (e) {}
         }
       } catch (e) {}
       document.getElementById('cnIp').textContent = ip;
       document.getElementById('cnLoc').textContent = loc;
     }
 
-    async function loadPublicIPs() {
-      let ip = '', locEn = '', country = '', city = '', isp = '';
+    // 国外卡：走代理时出口即代理落地 IP；ipwho.is 实测 ACAO * 且带完整 geo
+    async function loadForeignIP() {
+      let ip = '获取失败', loc = '未知';
       try {
-        // 优先 ip.sb
-        const data = await fetchIpSb();
-        ip = data.ip || data.ip_address || '';
-        country = data.country || data.country_code || '';
-        city = data.city || '';
-        isp = data.isp || data.organization || data.org || '';
-        locEn = [city, data.region, country].filter(Boolean).join(', ');
-        if (isp) locEn += ' · ' + isp;
+        const d = await (await fetch('https://ipwho.is/')).json();
+        if (d && d.success !== false && d.ip) {
+          ip = d.ip;
+          loc = [d.city, d.region, d.country].filter(Boolean).join(', ')
+              + (d.connection && d.connection.isp ? ' · ' + d.connection.isp : '');
+        }
       } catch (e) {
         try {
-          const data = await fetchIpApiCo();
-          ip = data.ip || '';
-          country = data.country_name || data.country || '';
-          city = data.city || '';
-          isp = data.org || '';
-          locEn = [city, data.region, country].filter(Boolean).join(', ');
-          if (isp) locEn += ' · ' + isp;
-        } catch {}
+          const d = await (await fetch('https://api.ipify.org?format=json')).json();
+          if (d && d.ip) ip = d.ip;
+        } catch (_) {}
       }
-
-      // 国外/Google/YouTube/AI 卡：当前代理出口 IP（国内卡另走 Worker 真实 IP）
-      const displayIp = ip || '获取失败';
-      const displayLoc = locEn || '未知';
-
-      document.getElementById('foreignIp').textContent = displayIp;
-      document.getElementById('foreignLoc').textContent = locEn || displayLoc;
-
-      document.getElementById('googleIp').textContent = displayIp;
-      document.getElementById('googleLoc').innerHTML = (locEn || displayLoc) + ' <span class="status pending" id="googleStatus">检测中...</span>';
-
-      document.getElementById('ytIp').textContent = displayIp;
-      document.getElementById('ytLoc').innerHTML = (locEn || displayLoc) + ' <span class="status pending" id="ytStatus">检测中...</span>';
-
-      document.getElementById('aiIp').textContent = displayIp;
-      document.getElementById('aiLoc').innerHTML = `
-        <span class="status pending" id="geminiStatus">Gemini</span>
-        <span class="status pending" id="grokStatus">Grok</span>
-        <span class="status pending" id="chatgptStatus">ChatGPT</span>
-        <div style="margin-top:0.3rem;font-size:0.85rem;">${locEn || displayLoc}</div>
-      `;
+      for (const id of ['foreignIp', 'googleIp', 'ytIp', 'aiIp']) {
+        const el = document.getElementById(id); if (el) el.textContent = ip;
+      }
+      const fl = document.getElementById('foreignLoc'); if (fl) fl.textContent = loc;
+      const gl = document.getElementById('googleLoc');
+      if (gl) gl.innerHTML = `${loc} <span class="status pending" id="googleStatus">检测中...</span>`;
+      const yl = document.getElementById('ytLoc');
+      if (yl) yl.innerHTML = `${loc} <span class="status pending" id="ytStatus">检测中...</span>`;
+      const al = document.getElementById('aiLoc');
+      if (al) al.innerHTML = `${loc}
+        <div style="margin-top:0.3rem">
+          <span class="status pending" id="geminiStatus">Gemini</span>
+          <span class="status pending" id="grokStatus">Grok</span>
+          <span class="status pending" id="chatgptStatus">ChatGPT</span>
+        </div>`;
     }
-    loadPublicIPs().then(() => {
-      checkConnectivity();
-    });
+    loadForeignIP().then(checkConnectivity);
     loadDomesticIP();
 
-    // ========== 连通性检测 (图片/无 CORS 方式) ==========
-    function checkSite(url, statusId, label) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        const timer = setTimeout(() => {
-          img.src = '';
-          const el = document.getElementById(statusId);
-          if (el) {
-            el.className = 'status fail';
-            el.textContent = label + ' 不可达';
-          }
-          resolve(false);
-        }, 4000);
-        img.onload = img.onerror = () => {
-          // 多数情况下 onerror 也会触发（跨域），但只要有响应就说明网络可达
-          clearTimeout(timer);
-          const el = document.getElementById(statusId);
-          if (el) {
-            el.className = 'status ok';
-            el.textContent = label + ' 可达';
-          }
-          resolve(true);
-        };
-        // 使用带随机参数避免缓存，并尽量触发网络请求
-        img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-      });
+    // ========== 连通性检测：no-cors fetch + 超时（能区分超时与失败） ==========
+    // 注：403 亦记「可达」——TCP+TLS 已成功（ChatGPT 的 CF bot 防护会挡 favicon）
+    async function reachable(url, ms = 4000) {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), ms);
+      try {
+        await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ac.signal });
+        return true;
+      } catch (e) {
+        return false;
+      } finally {
+        clearTimeout(t);
+      }
+    }
+
+    function setStatus(id, label, ok) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'status ' + (ok ? 'ok' : 'fail');
+      el.textContent = label + (ok ? ' 可达' : ' 不可达');
     }
 
     async function checkConnectivity() {
-      // Google
-      await checkSite('https://www.google.com/favicon.ico', 'googleStatus', 'Google');
-      // YouTube
-      await checkSite('https://www.youtube.com/favicon.ico', 'ytStatus', 'YouTube');
-      // AI sites
-      await checkSite('https://gemini.google.com/favicon.ico', 'geminiStatus', 'Gemini');
-      await checkSite('https://grok.x.ai/favicon.ico', 'grokStatus', 'Grok');
-      await checkSite('https://chatgpt.com/favicon.ico', 'chatgptStatus', 'ChatGPT');
+      setStatus('googleStatus',  'Google',  await reachable('https://www.google.com/generate_204'));
+      setStatus('ytStatus',      'YouTube', await reachable('https://www.youtube.com/favicon.ico'));
+      setStatus('geminiStatus',  'Gemini',  await reachable('https://gemini.google.com/favicon.ico'));
+      setStatus('grokStatus',    'Grok',    await reachable('https://grok.x.ai/favicon.ico'));
+      setStatus('chatgptStatus', 'ChatGPT', await reachable('https://chatgpt.com/favicon.ico'));
     }
 
     // 每 10 分钟自动刷新页面（更新天气、IP、连通性等）
