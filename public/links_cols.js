@@ -13,11 +13,11 @@
   .zen-col-title:hover{text-decoration:underline}
   .zen-col-count{font-size:0.75rem;opacity:0.7}
   ul.zen-list{list-style:none}
-  .zen-item{display:block;padding:0.45rem 0.1rem;border-bottom:1px dashed rgba(120,120,120,0.18)}
+  .zen-item{display:flex;align-items:center;justify-content:space-between;gap:0.4rem;padding:0.45rem 0.1rem;border-bottom:1px dashed rgba(120,120,120,0.18)}
   .zen-item:last-child{border-bottom:none}
-  .zen-item a{display:block;color:var(--ink);text-decoration:none;word-break:break-all;font-size:0.92rem}
+  .zen-item a{display:block;color:var(--ink);text-decoration:none;word-break:break-all;font-size:0.92rem;flex:1;min-width:0}
   .zen-item a:hover{color:var(--accent);text-decoration:underline}
-  .zen-item-bar{display:flex;gap:0.35rem;align-items:center;margin-top:0.25rem;flex-wrap:wrap}
+  .zen-item button.danger{flex:0 0 auto;padding:0.2rem 0.45rem;font-size:0.72rem}
   .zen-empty{color:#999;font-size:0.8rem;padding:0.5rem 0.1rem}
   #groupSel{padding:0.55rem 0.6rem;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:0.9rem;background:#fff;flex:0 0 auto}
   `;
@@ -120,14 +120,12 @@
         a.href = item.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
         a.textContent = item.name || item.url;
 
-        const bar = document.createElement('div'); bar.className = 'zen-item-bar';
         const del = document.createElement('button'); del.className = 'danger'; del.textContent = '删除';
         del.onclick = async () => {
           if (!confirm('确定删除「' + (item.name || item.url) + '」？')) return;
           g.links.splice(idx, 1); await saveLinks(); render();
         };
-        bar.appendChild(del);
-        row.appendChild(a); row.appendChild(bar);
+        row.appendChild(a); row.appendChild(del);
         ul.appendChild(row);
       });
       col.appendChild(ul); host.appendChild(col);
