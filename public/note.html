@@ -147,9 +147,16 @@
       overflow-y: auto;
       box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     }
+    .edit-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
     .edit-box h3 {
       color: var(--accent);
-      margin-bottom: 1rem;
+      margin-bottom: 0;
     }
     .edit-actions {
       display: flex;
@@ -245,12 +252,14 @@
   <!-- 编辑弹窗 -->
   <div id="editModal">
     <div class="edit-box">
-      <h3 id="editTitle">新建笔记</h3>
+      <div class="edit-head">
+        <h3 id="editTitle">新建笔记</h3>
+        <button class="danger" id="deleteBtn" onclick="deleteCurrent()" style="display:none;">删除</button>
+      </div>
       <input type="text" id="noteTitle" placeholder="标题（可选）" maxlength="100">
       <textarea id="noteContent" placeholder="在此写下你的想法..."></textarea>
       <div class="edit-actions">
         <button class="secondary" onclick="closeEdit()">取消</button>
-        <button class="danger" id="deleteBtn" onclick="deleteCurrent()" style="display:none;">删除</button>
         <button onclick="saveNote()">保存</button>
       </div>
     </div>
