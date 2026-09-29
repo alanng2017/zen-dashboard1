@@ -117,6 +117,29 @@ export default {
       return json({ error: 'all lookups failed' }, 502, request);
     }
 
+    // 流量卡查询中转：sdx.babm.cn 官方接口，前端直连失败时回退到这里
+    // GET /api/sim?card=21922D1291913
+    if (path === 'api/sim') {
+      const card = (url.searchParams.get('card') || '').trim();
+      if (!/^[A-Za-z0-9]{6,32}$/.test(card)) {
+        return json({ error: 'bad card' }, 400, request);
+      }
+      try {
+        const r = await fetch(
+          `https://sdx.babm.cn/app/simCard/phoneSimCard?card=${encodeURIComponent(card)}`,
+          { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }
+        );
+        if (!r.ok) return json({ error: 'sim upstream ' + r.status }, 502, request);
+        const text = await r.text();
+        return new Response(text, {
+          status: 200,
+          headers: { ...corsHeaders(request), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+        });
+      } catch (err) {
+        return json({ error: err.message || 'sim proxy failed' }, 502, request);
+      }
+    }
+
     // 只允许 /api/work  /api/life  /api/note  /api/ai  /api/iot
     const match = path.match(/^api\/(work|life|note|ai|iot)$/);
     if (!match) {

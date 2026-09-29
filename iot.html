@@ -1,625 +1,463 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#a8453c">
-  <title>物联卡 · 流量卡管理</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234a6741'/><text y='.9em' x='50%' text-anchor='middle' font-size='60' fill='%23f7f3e9'>禅</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --ink: #1a1a1a;
-      --accent: #a8453c;
-      --mist: rgba(255,255,255,0.85);
-      --shadow: rgba(0,0,0,0.1);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Noto Serif SC', serif;
-      background: linear-gradient(180deg, #f6e9e6 0%, #f7f3e9 100%);
-      color: var(--ink);
-      min-height: 100vh;
-      padding: 1.5rem 1rem 3rem;
-    }
-    .container { width: 100%; }
-    h1 {
-      text-align: center;
-      font-size: 1.6rem;
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-      letter-spacing: 0.2em;
-    }
-    .back {
-      display: block;
-      text-align: center;
-      margin-bottom: 1.5rem;
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.95rem;
-    }
-    .back:hover { text-decoration: underline; }
-    .card {
-      background: var(--mist);
-      border: 1px solid rgba(168,69,60,0.25);
-      border-radius: 12px;
-      padding: 1.25rem;
-      box-shadow: 0 3px 14px var(--shadow);
-      margin-bottom: 1.25rem;
-    }
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-    }
-    input[type="text"], input[type="url"], input[type="password"] {
-      flex: 1;
-      min-width: 140px;
-      padding: 0.55rem 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.95rem;
-    }
-    button {
-      padding: 0.55rem 1.1rem;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.95rem;
-      transition: background 0.2s;
-    }
-    button:hover { background: #8a3630; }
-    button.secondary {
-      background: #c08078;
-    }
-    button.secondary:hover { background: #b06a62; }
-    button.danger {
-      background: #a33;
-      padding: 0.3rem 0.6rem;
-      font-size: 0.8rem;
-    }
-    button.danger:hover { background: #822; }
-    ul { list-style: none; }
-    li {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.7rem 0.5rem;
-      border-bottom: 1px dashed rgba(168,69,60,0.2);
-      gap: 0.5rem;
-    }
-    li:last-child { border-bottom: none; }
-    li a {
-      color: var(--ink);
-      text-decoration: none;
-      flex: 1;
-      word-break: break-all;
-    }
-    li a:hover { color: var(--accent); text-decoration: underline; }
-    .empty {
-      text-align: center;
-      color: #888;
-      padding: 1.5rem;
-      font-size: 0.95rem;
-    }
-    .hint {
-      font-size: 0.8rem;
-      color: #666;
-      margin-top: 0.5rem;
-    }
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-    /* 密码遮罩 */
-    #lockOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(246,233,230,0.95);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 1rem;
-    }
-    #lockOverlay.hidden { display: none; }
-    .lock-box {
-      background: var(--mist);
-      border: 1px solid rgba(168,69,60,0.3);
-      border-radius: 16px;
-      padding: 2rem 1.5rem;
-      max-width: 360px;
-      width: 100%;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-      text-align: center;
-    }
-    .lock-box h2 {
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-      font-size: 1.3rem;
-    }
-    .lock-box p {
-      font-size: 0.9rem;
-      color: #555;
-      margin-bottom: 1.2rem;
-    }
-    .lock-box input {
-      width: 100%;
-      margin-bottom: 0.8rem;
-      text-align: center;
-      letter-spacing: 0.1em;
-    }
-    .lock-box .error {
-      color: #a33;
-      font-size: 0.85rem;
-      margin-bottom: 0.6rem;
-      min-height: 1.2em;
-    }
-    .main-content.hidden { display: none; }
-      .lock-back { display:inline-block; margin-top:1rem; color:#a8453c; text-decoration:none; font-size:0.9rem; opacity:0.8; }
-    .lock-back:hover { opacity:1; text-decoration:underline; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b63ce">
+<title>物联卡 · 流量卡查询</title>
+<style>
+  :root{
+    --bg:#eef1f4; --card:#ffffff; --ink:#1a1d21; --sub:#5b6472; --line:#e4e8ec;
+    --accent:#0b63ce; --accent2:#e8f1fd;
+    --ok:#1a7f4b; --warn:#b26a00; --bad:#c0392b;
+    --ring:#0b63ce; --ringbg:#e9eef3;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+    padding:14px 12px 34px;min-height:100vh;
+  }
+  .wrap{width:100%;max-width:460px;margin:0 auto}
+
+  /* ---------- 卡号条 ---------- */
+  .cardno{
+    background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:13px 16px;text-align:center;font-weight:700;font-size:16.5px;
+    letter-spacing:.6px;margin-bottom:11px;word-break:break-all;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    flex-wrap:wrap;
+  }
+  .cardno .dot{width:7px;height:7px;border-radius:50%;background:#c9ced5;flex:0 0 auto}
+  .cardno.live .dot{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+  .cardno .copy{
+    font-size:11.5px;font-weight:500;color:var(--sub);border:1px solid var(--line);
+    background:#f7f8fa;border-radius:6px;padding:2px 7px;cursor:pointer;flex:0 0 auto;
+  }
+  .cardno .copy:active{background:#eceff2}
+
+  /* ---------- 主卡片 ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:16px;margin-bottom:11px;
+  }
+
+  .flowhead{display:flex;justify-content:space-between;font-size:13.5px;color:var(--sub);margin-bottom:2px}
+  .flowhead b{color:var(--ink);font-weight:600}
+
+  .ringbox{display:flex;justify-content:center;padding:8px 0 2px}
+  .ring{position:relative;width:186px;height:186px}
+  .ring svg{transform:rotate(-90deg);display:block}
+  .ring .mid{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+  }
+  .ring .left-ttl{font-size:12.5px;color:var(--sub);margin-bottom:2px}
+  .ring .left-val{font-size:25px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
+  .ring .pct{font-size:12.5px;color:var(--sub);margin-top:4px}
+
+  .upd{text-align:center;font-size:12px;color:var(--sub);margin-top:8px}
+
+  /* ---------- 信息行 ---------- */
+  .rows{display:flex;flex-direction:column;gap:11px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .row .k{color:var(--sub);font-size:13.5px;flex:0 0 auto}
+  .row .v{font-weight:600;text-align:right;word-break:break-all}
+  .row .v.big{font-size:16px}
+
+  /* ---------- 天数 ---------- */
+  .days{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px}
+  .daycard{background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:15px 16px;text-align:center}
+  .daycard .lbl{font-size:13.5px;color:var(--sub);margin-bottom:3px}
+  .daycard .num{font-size:31px;font-weight:700;letter-spacing:-1px;line-height:1.1}
+  .daycard .sub2{font-size:12px;color:var(--sub);margin-top:5px}
+  .daycard.used .num{color:var(--warn)}
+  .daycard.avail .num{color:var(--ok)}
+
+  /* ---------- 状态 ---------- */
+  .state{
+    display:flex;align-items:center;gap:8px;justify-content:center;
+    font-size:13px;color:var(--sub);padding:4px 0 2px;
+  }
+  .state .badge{
+    font-size:12px;font-weight:600;border-radius:99px;padding:3px 11px;
+  }
+  .badge.ok{background:#e8f6ee;color:var(--ok)}
+  .badge.warn{background:#fdf3e3;color:var(--warn)}
+  .badge.bad{background:#fdecea;color:var(--bad)}
+  .badge.info{background:var(--accent2);color:var(--accent)}
+
+  /* ---------- 刷新 ---------- */
+  .toolbar{display:flex;gap:9px;margin-top:13px}
+  .btn{
+    flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:10px;padding:12px 10px;font-size:14.5px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.55;cursor:default}
+
+  /* ---------- 骨架 / 提示 ---------- */
+  .skeleton{border-radius:6px;background:linear-gradient(90deg,#eceff2 25%,#f6f7f9 50%,#eceff2 75%);
+    background-size:200% 100%;animation:sk 1.3s infinite;color:transparent!important}
+  @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  .offline{
+    background:#fdf3e3;border:1px solid #f0dcb8;color:#7a4f00;
+    border-radius:11px;padding:12px 14px;font-size:13.5px;margin-bottom:11px;display:none;
+  }
+  .offline.show{display:block}
+  .offline b{display:block;margin-bottom:3px}
+
+  .back{display:block;text-align:center;margin:0 0 11px;color:var(--accent);text-decoration:none;font-size:13.5px;font-weight:600;opacity:.85}
+  .back:hover{opacity:1;text-decoration:underline}
+  .foot{text-align:center;font-size:11.5px;color:#8b939c;margin-top:18px;line-height:1.7}
+
+  /* 不显示任何模态框 —— 接口返回的公告以折叠区呈现 */
+  details.notice{
+    background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:0;margin-bottom:11px;overflow:hidden;
+  }
+  details.notice>summary{
+    padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--accent);
+    cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;
+  }
+  details.notice>summary::-webkit-details-marker{display:none}
+  details.notice>summary::after{content:"展开 ▾";font-size:12px;font-weight:400;color:var(--sub)}
+  details.notice[open]>summary::after{content:"收起 ▴"}
+  details.notice .nbody{
+    padding:0 16px 15px;font-size:13.5px;color:var(--sub);line-height:1.75;
+    border-top:1px solid var(--line);padding-top:13px;
+  }
+  details.notice .nbody p{margin:7px 0}
+  details.notice .nbody strong{color:var(--ink)}
+</style>
 </head>
 <body>
-  <!-- 密码解锁遮罩 -->
-  <div id="lockOverlay">
-    <div class="lock-box">
-      <h2 id="lockTitle">物联卡 · 解锁</h2>
-      <p id="lockDesc">请输入密码以查看物联卡链接</p>
-      <div class="error" id="lockError"></div>
-      <input type="password" id="lockPwd" placeholder="输入密码" autocomplete="current-password">
-      <input type="password" id="lockPwd2" placeholder="再次确认密码" style="display:none;" autocomplete="new-password">
-      <button id="lockBtn" onclick="handleLockAction()" style="width:100%;margin-top:0.3rem;">解锁</button>
-      <a href="index.html" class="lock-back">← 返回主页</a>
-      <p class="hint" id="lockHint" style="margin-top:1rem;"></p>
+<div class="wrap">
+
+  <a href="index.html" class="back">← 返回首页</a>
+
+  <!-- 卡号 -->
+  <div class="cardno" id="cardno">
+    <span class="dot"></span>
+    <span id="cardnoText">加载中…</span>
+    <span class="copy" id="copyBtn">复制</span>
+  </div>
+
+  <!-- 离线提示 -->
+  <div class="offline" id="offline">
+    <b>无法获取最新数据</b>
+    接口暂时不可达或网络受限，当前显示的是最后一次成功获取的数据。
+  </div>
+
+  <!-- 流量主卡 -->
+  <div class="card">
+    <div class="flowhead">
+      <span>已使用 <b id="usedTxt">—</b></span>
+      <span>总流量 <b id="totalTxt">—</b></span>
+    </div>
+
+    <div class="ringbox">
+      <div class="ring">
+        <svg width="186" height="186" viewBox="0 0 186 186">
+          <circle cx="93" cy="93" r="79" fill="none" stroke="var(--ringbg)" stroke-width="13"/>
+          <circle id="ringArc" cx="93" cy="93" r="79" fill="none"
+                  stroke="var(--ring)" stroke-width="13" stroke-linecap="round"
+                  stroke-dasharray="496.4" stroke-dashoffset="496.4"
+                  style="transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)"/>
+        </svg>
+        <div class="mid">
+          <div class="left-ttl">剩余</div>
+          <div class="left-val" id="leftTxt">—</div>
+          <div class="pct" id="pctTxt">—</div>
+        </div>      </div>
+    </div>
+
+    <div class="upd">最近更新：<span id="updTxt">—</span></div>
+  </div>
+
+  <!-- 套餐信息 -->
+  <div class="card">
+    <div class="rows">
+      <div class="row"><span class="k">运营商</span><span class="v" id="opTxt">—</span></div>
+      <div class="row"><span class="k">当前套餐</span><span class="v" id="planTxt">—</span></div>
+      <div class="row"><span class="k">开通时间</span><span class="v" id="startTxt">—</span></div>
+      <div class="row"><span class="k">到期时间</span><span class="v" id="endTxt">—</span></div>
+      <div class="row"><span class="k">ICCID</span><span class="v" id="iccTxt" style="font-size:12.5px;font-weight:500;color:var(--sub)">—</span></div>
     </div>
   </div>
 
-  <div class="container main-content hidden" id="mainContent">
-    <h1>物联卡 · 流量卡</h1>
-    <a href="index.html" class="back">← 返回首页</a>
-
-    <div class="card">
-      <div class="form-row">
-        <input type="text" id="nameInput" placeholder="名称（如：卡商后台）" maxlength="50">
-        <input type="url" id="urlInput" placeholder="https://example.com" maxlength="300">
-        <button onclick="addLink()">添加</button>
-      </div>
-      <div class="hint">链接已加密保存在本浏览器，点击即可新标签页打开。</div>
-      <div class="toolbar">
-        <button class="secondary" onclick="exportData()">导出</button>
-        <button class="secondary" onclick="importData()">导入</button>
-        <button class="secondary" onclick="changePassword()">修改密码</button>
-        <button class="secondary" onclick="lockNow()">锁定</button>
-        <button class="danger" onclick="clearAll()">清除全部</button>
-      </div>
+  <!-- 天数 -->
+  <div class="days">
+    <div class="daycard used">
+      <div class="lbl">已用天数</div>
+      <div class="num" id="usedDays">—</div>
+      <div class="sub2">日均使用：<span id="avgUsed">—</span></div>
     </div>
-
-    <div class="card">
-      <ul id="linkList"></ul>
-      <div class="empty" id="emptyTip">暂无链接，请在上方添加。</div>
+    <div class="daycard avail">
+      <div class="lbl">可用天数</div>
+      <div class="num" id="availDays">—</div>
+      <div class="sub2">日均可用：<span id="avgAvail">—</span></div>
     </div>
   </div>
 
-  <script>
-    // ========== 配置 ==========
-    // 部署 Worker 后，把下面改成你的 Worker 地址，例如：
-    // const WORKER_URL = 'https://zen-sync.你的账号.workers.dev';
-    // 留空则只使用本地 localStorage
-    const WORKER_URL = 'https://m.1024m.bond';
+  <!-- 状态 -->
+  <div class="state">
+    <span class="badge info" id="statusBadge">查询中…</span>
+  </div>
 
-    const PAGE = 'iot';
-    const HASH_KEY = `zen_${PAGE}_pwd_hash`;
-    const DATA_KEY = `zen_${PAGE}_data`;
-    const SESSION_KEY = `zen_${PAGE}_unlocked`;
-    // 跨页共享解锁：同一浏览器一次解锁，work/life/note 通用；点「锁定」才失效
-    const SHARED_PWD_KEY = 'zen_shared_pwd';
+  <!-- 公告（折叠，绝不弹窗） -->
+  <details class="notice" id="noticeBox" style="display:none;margin-top:13px">
+    <summary>套餐说明与注意事项</summary>
+    <div class="nbody" id="noticeBody"></div>
+  </details>
 
-    let currentPassword = null;
-    let links = [];
+  <!-- 操作 -->
+  <div class="toolbar">
+    <button class="btn" id="refreshBtn">刷新</button>
+    <button class="btn primary" id="autoBtn">自动刷新：关</button>
+  </div>
 
-    // ========== 工具函数 ==========
-    async function sha256(str) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  <div class="foot">
+    数据来源：sdx.babm.cn 官方查询接口 · 页面实时拉取（直连失败自动走同域代理）<br>
+    <span id="tsFoot">—</span>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ------- 配置 -------
+  var DEFAULT_CARD = "21922D1291913";
+  // 允许 ?card=21922D1291913 覆盖默认卡号
+  var qs = (location.search.match(/[?&]card=([^&]+)/) || [])[1];
+  var CARD = qs ? decodeURIComponent(qs) : DEFAULT_CARD;
+  var DIRECT = "https://sdx.babm.cn/app/simCard/phoneSimCard?card=" + encodeURIComponent(CARD);
+  // 直连失败时回退走同域 Worker 代理（避免 CORS / 运营商侧限制）
+  var PROXY  = "api/sim?card=" + encodeURIComponent(CARD);
+  var MB   = 1024;              // 接口单位 MB -> GB
+  var AUTO_MS = 60000;          // 自动刷新间隔
+
+  var autoTimer = null;
+  var lastGood  = null;         // 最后一次成功的数据
+  var lastTime  = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ------- 工具 -------
+  function fmtGB(mb){
+    if (mb === null || mb === undefined || isNaN(mb)) return "—";
+    return (mb / MB).toFixed(2) + "GB";
+  }
+  function fmtDate(s){
+    if (!s || typeof s !== "string") return "—";
+    return s.replace(/-/g, "/").slice(0, 16);
+  }
+  function fmtTime(d){
+    function p(n){ return (n<10?"0":"") + n; }
+    return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + " " +
+           p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  function esc(s){
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  // 由「开通时间 / 到期时间」推算天数，与 APP 首页口径一致。
+  // 口径（反推自 APP 截图，2026-09-29 21:56 显示 已用272 / 可用94）：
+  //   总周期 = 到期 - 开通 = 365 天
+  //   可用天数 = ceil((到期 - 现在) / 86400) = 94   ← 向上取整，注意不是 floor
+  //   已用天数 = 总周期 - 可用天数 + 1 = 272       ← 含当天
+  // 校验：94 = 接口 days 字段(93) + 1
+  function computeDays(startStr, endStr){
+    var s = Date.parse(String(startStr||"").replace(/-/g,"/"));
+    var e = Date.parse(String(endStr||"").replace(/-/g,"/"));
+    if (isNaN(s) || isNaN(e) || e <= s) return null;
+    var DAY = 86400000;
+    var total = Math.round((e - s) / DAY);              // 整个周期天数
+    var avail = Math.ceil((e - Date.now()) / DAY);      // 剩余天数：向上取整
+    if (avail < 0) avail = 0;
+    if (avail > total) avail = total;
+    var used = total - avail + 1;                       // 含当天
+    if (used < 1) used = 1;
+    if (used > total) used = total;
+    return { total: total, used: used, avail: avail };
+  }
+
+  // ------- 渲染 -------
+  function render(d, when){
+    var totalMB   = d.sumFlow;
+    var usedMB    = d.consumeFlow;
+    var leftMB    = d.surplusFlow;
+    var usedPct   = (totalMB > 0) ? (usedMB / totalMB * 100) : 0;   // 与 APP 首页一致：显示「已用」占比
+    var leftPct   = (totalMB > 0) ? (leftMB / totalMB * 100) : 0;
+
+    $("cardnoText").textContent = d.meCardNum || CARD;
+    $("usedTxt").textContent    = fmtGB(usedMB);
+    $("totalTxt").textContent   = fmtGB(totalMB);
+    $("leftTxt").textContent    = fmtGB(leftMB);
+    // APP 首页圆环中央显示的是「已用百分比」（截图 3.89%），此处对齐该口径
+    $("pctTxt").textContent     = usedPct.toFixed(2) + "%（已用）";
+
+    // 圆环：按剩余比例填充
+    var C = 2 * Math.PI * 79;                 // 周长 ≈ 496.4
+    var arc = $("ringArc");
+    arc.setAttribute("stroke-dasharray", C.toFixed(1));
+    arc.setAttribute("stroke-dashoffset", (C * (1 - leftPct/100)).toFixed(1));
+    // 剩余偏少时变橙，起提示作用
+    arc.setAttribute("stroke", leftPct < 10 ? "#e08a00" : "#0b63ce");
+
+    $("opTxt").textContent    = d.name || d.falseOp || "—";
+    $("planTxt").textContent  = d.displayName || "—";
+    $("startTxt").textContent = fmtDate(d.addTime);
+    $("endTxt").textContent   = fmtDate(d.mealEndTime);
+    $("iccTxt").textContent   = d.iccId || "—";
+
+    var dd = computeDays(d.addTime, d.mealEndTime);
+    if (dd){
+      $("usedDays").textContent  = dd.used;
+      $("availDays").textContent = dd.avail;
+      var avgU = dd.used  > 0 ? (usedMB / dd.used)  : 0;
+      var avgA = dd.avail > 0 ? (leftMB / dd.avail) : 0;
+      $("avgUsed").textContent  = (avgU/MB).toFixed(2) + "GB";
+      $("avgAvail").textContent = (avgA/MB).toFixed(2) + "GB";
+    } else {
+      $("usedDays").textContent = $("availDays").textContent = "—";
+      $("avgUsed").textContent  = $("avgAvail").textContent  = "—";
     }
 
-    async function deriveKey(password) {
-      const enc = new TextEncoder();
-      const keyMaterial = await crypto.subtle.importKey(
-        'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
-      );
-      return crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt: enc.encode('zen-dashboard-salt-v1'), iterations: 100000, hash: 'SHA-256' },
-        keyMaterial,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
-      );
+    // 状态徽标
+    var badge = $("statusBadge");
+    var expired = dd ? (dd.avail <= 0) : false;
+    if (!d.isPay || expired){
+      badge.className = "badge bad";
+      badge.textContent = expired ? "已到期" : "未激活";
+    } else if (dd && dd.avail <= 7){
+      badge.className = "badge warn";
+      badge.textContent = "即将到期（剩 " + dd.avail + " 天）";
+    } else if (leftPct < 10){
+      badge.className = "badge warn";
+      badge.textContent = "流量不足 10%";
+    } else {
+      badge.className = "badge ok";
+      badge.textContent = "使用正常";
     }
 
-    async function encrypt(text, password) {
-      const key = await deriveKey(password);
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encoded = new TextEncoder().encode(text);
-      const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
-      const combined = new Uint8Array(iv.length + cipher.byteLength);
-      combined.set(iv);
-      combined.set(new Uint8Array(cipher), iv.length);
-      return btoa(String.fromCharCode(...combined));
+    $("updTxt").textContent = fmtTime(when);
+    $("tsFoot").textContent = "页面更新于 " + fmtTime(when);
+    $("cardno").classList.add("live");
+    $("offline").classList.remove("show");
+  }
+
+  function showOffline(){
+    $("offline").classList.add("show");
+    $("cardno").classList.remove("live");
+  }
+
+  // ------- 公告：只在展开时显示，绝不弹窗 -------
+  function renderNotice(d){
+    var parts = [];
+    var sm = d.seriesModel || {};
+    if (sm.alert)  parts.push(sm.alert);
+    if (sm.notice) parts.push("<p>" + esc(sm.notice) + "</p>");
+    var mo = d.mnnouncementModel || {};
+    if (mo.content) parts.push("<p>" + esc(mo.content) + "</p>");
+    if (d.prestoreTips) parts.push("<p>" + esc(d.prestoreTips) + "</p>");
+
+    if (!parts.length){ $("noticeBox").style.display = "none"; return; }
+    $("noticeBody").innerHTML = parts.join("");
+    $("noticeBox").style.display = "";
+  }
+
+  // ------- 拉取 -------
+  function load(silent){
+    if (!silent) $("refreshBtn").disabled = true;
+    $("refreshBtn").textContent = "刷新中…";
+
+    function getJSON(u){
+      return fetch(u, { method:"GET", cache:"no-store", credentials:"omit" })
+        .then(function(r){
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        });
     }
 
-    async function decrypt(base64, password) {
-      const key = await deriveKey(password);
-      const combined = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      const iv = combined.slice(0, 12);
-      const data = combined.slice(12);
-      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
-      return new TextDecoder().decode(plain);
-    }
-
-    // ========== 密码与会话 ==========
-    function isUnlocked() {
-      return sessionStorage.getItem(SESSION_KEY) === '1';
-    }
-
-    function setUnlocked(pwd) {
-      currentPassword = pwd;
-      localStorage.setItem(SHARED_PWD_KEY, pwd);
-      sessionStorage.setItem(SESSION_KEY, '1');
-    }
-
-    function lockNow() {
-      localStorage.removeItem(SHARED_PWD_KEY);
-      sessionStorage.removeItem(SESSION_KEY);
-      currentPassword = null;
-      location.reload();
-    }
-
-    async function hasPassword() {
-      if (localStorage.getItem(HASH_KEY)) return true;
-      if (WORKER_URL) {
-        try {
-          const res = await fetch(`${WORKER_URL}/api/${PAGE}`);
-          const obj = await res.json();
-          return !!(obj && (obj.hash || obj.pwd_hash));
-        } catch { return false; }
-      }
-      return false;
-    }
-
-    // ========== 数据存取（本地 + 云端） ==========
-    async function loadLinks() {
-      if (!currentPassword) {
-        links = [];
-        return;
-      }
-
-      let raw = null;
-
-      // 1. 尝试从云端拉取
-      if (WORKER_URL) {
-        try {
-          const res = await fetch(`${WORKER_URL}/api/${PAGE}`);
-          if (res.ok) {
-            const obj = await res.json();
-            if (obj.data) {
-              raw = obj.data;
-              localStorage.setItem(DATA_KEY, raw);
-              if (obj.hash) localStorage.setItem(HASH_KEY, obj.hash);
-            }
-          }
-        } catch (e) {
-          console.warn('云端读取失败，使用本地缓存', e);
+    getJSON(DIRECT)
+      .catch(function(){ return getJSON(PROXY); })   // 直连不通 → 走 Worker 代理
+      .then(function(j){
+        if (!j || j.code !== 0 || !j.data) {
+          throw new Error(j && j.msg ? j.msg : "接口返回异常");
         }
-      }
-
-      // 2. 云端没有则用本地
-      if (!raw) raw = localStorage.getItem(DATA_KEY);
-
-      if (!raw) {
-        links = [];
-        return;
-      }
-
-      try {
-        const json = await decrypt(raw, currentPassword);
-        links = JSON.parse(json);
-      } catch {
-        links = [];
-        alert('数据解密失败，可能是密码错误或数据已损坏。');
-      }
-    }
-
-    async function saveLinks() {
-      if (!currentPassword) return;
-      const json = JSON.stringify(links);
-      const encrypted = await encrypt(json, currentPassword);
-      const hash = await sha256(currentPassword);
-
-      // 本地始终保存
-      localStorage.setItem(DATA_KEY, encrypted);
-      localStorage.setItem(HASH_KEY, hash);
-
-      // 云端同步
-      if (WORKER_URL) {
-        try {
-          await fetch(`${WORKER_URL}/api/${PAGE}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hash, data: encrypted }),
-          });
-        } catch (e) {
-          console.warn('云端保存失败（本地已保存）', e);
-        }
-      }
-    }
-
-    // ========== UI ==========
-    function render() {
-      const ul = document.getElementById('linkList');
-      const empty = document.getElementById('emptyTip');
-      ul.innerHTML = '';
-      if (links.length === 0) {
-        empty.style.display = 'block';
-        return;
-      }
-      empty.style.display = 'none';
-      links.forEach((item, idx) => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.href = item.url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.textContent = item.name || item.url;
-        const btn = document.createElement('button');
-        btn.className = 'danger';
-        btn.textContent = '删除';
-        btn.onclick = async () => {
-          if (confirm('确定删除「' + (item.name || item.url) + '」？')) {
-            links.splice(idx, 1);
-            await saveLinks();
-            render();
-          }
-        };
-        li.appendChild(a);
-        li.appendChild(btn);
-        ul.appendChild(li);
-      });
-    }
-
-    async function addLink() {
-      const name = document.getElementById('nameInput').value.trim();
-      let url = document.getElementById('urlInput').value.trim();
-      if (!url) { alert('请填写网址'); return; }
-      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-      try { new URL(url); } catch { alert('网址格式不正确'); return; }
-      links.push({ name: name || url, url });
-      await saveLinks();
-      document.getElementById('nameInput').value = '';
-      document.getElementById('urlInput').value = '';
-      render();
-    }
-
-    // ========== 密码流程 ==========
-    async function showLockUI() {
-      const overlay = document.getElementById('lockOverlay');
-      const title = document.getElementById('lockTitle');
-      const desc = document.getElementById('lockDesc');
-      const pwd2 = document.getElementById('lockPwd2');
-      const btn = document.getElementById('lockBtn');
-      const hint = document.getElementById('lockHint');
-      const hasPwd = await hasPassword();
-
-      if (!hasPwd) {
-        title.textContent = '物联卡 · 设置密码';
-        desc.textContent = '首次使用，请设置一个密码（用于加密保护链接）';
-        pwd2.style.display = 'block';
-        btn.textContent = '设置密码并进入';
-        hint.textContent = '密码仅保存在本设备，请务必记住。';
-      } else {
-        title.textContent = '物联卡 · 解锁';
-        desc.textContent = '请输入密码以查看物联卡链接';
-        pwd2.style.display = 'none';
-        btn.textContent = '解锁';
-        hint.textContent = '新设备或新浏览器需要重新输入密码。';
-      }
-      overlay.classList.remove('hidden');
-      document.getElementById('mainContent').classList.add('hidden');
-      document.getElementById('lockPwd').focus();
-    }
-
-    async function handleLockAction() {
-      const pwd = document.getElementById('lockPwd').value;
-      const pwd2 = document.getElementById('lockPwd2').value;
-      const err = document.getElementById('lockError');
-      err.textContent = '';
-
-      if (!pwd || pwd.length < 4) {
-        err.textContent = '密码至少 4 位';
-        return;
-      }
-
-      const hasPwd = await hasPassword();
-
-      if (!hasPwd) {
-        // 设置密码
-        if (pwd !== pwd2) {
-          err.textContent = '两次密码不一致';
-          return;
-        }
-        const hash = await sha256(pwd);
-        localStorage.setItem(HASH_KEY, hash);
-        setUnlocked(pwd);
-        await loadLinks();
-        document.getElementById('lockOverlay').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
-        render();
-        return;
-      }
-
-      // 验证密码
-      // 以服务端全局密码 hash 为准；服务端没配则退回 KV hash + 本地缓存
-      let cloud = null;
-      try { const r = await fetch(`${WORKER_URL}/api/${PAGE}`); cloud = await r.json(); } catch {}
-      const serverHash = cloud && cloud.pwd_hash;
-      const hash = await sha256(pwd);
-      if (serverHash) {
-        if (hash !== serverHash) { err.textContent = '密码错误'; return; }
-      } else {
-        const stored = localStorage.getItem(HASH_KEY) || (cloud && cloud.hash);
-        if (hash !== stored) { err.textContent = '密码错误'; return; }
-      }
-      localStorage.setItem(HASH_KEY, serverHash || hash);
-      setUnlocked(pwd);
-      await loadLinks();
-      document.getElementById('lockOverlay').classList.add('hidden');
-      document.getElementById('mainContent').classList.remove('hidden');
-      render();
-    }
-
-    // 密码已由 Cloudflare 变量统一管理，页面不再支持改密
-    async function changePassword() {
-      alert('密码已由服务器统一管理。请到 Cloudflare 修改 Worker 变量 password 后重新部署。');
-    }
-
-    async function changePasswordDisabled() {
-      const oldPwd = prompt('请输入当前密码：');
-      if (!oldPwd) return;
-      const hash = await sha256(oldPwd);
-      if (hash !== localStorage.getItem(HASH_KEY)) {
-        alert('当前密码错误');
-        return;
-      }
-      const newPwd = prompt('请输入新密码（至少4位）：');
-      if (!newPwd || newPwd.length < 4) {
-        alert('新密码无效');
-        return;
-      }
-      const newPwd2 = prompt('请再次输入新密码：');
-      if (newPwd !== newPwd2) {
-        alert('两次新密码不一致');
-        return;
-      }
-      // 用旧密码解密，再用新密码加密
-      currentPassword = oldPwd;
-      await loadLinks();
-      const newHash = await sha256(newPwd);
-      localStorage.setItem(HASH_KEY, newHash);
-      currentPassword = newPwd;
-      await saveLinks();
-      localStorage.setItem(SHARED_PWD_KEY, newPwd);
-      alert('密码已修改成功');
-    }
-
-    function exportData() {
-      const data = localStorage.getItem(DATA_KEY);
-      const hash = localStorage.getItem(HASH_KEY);
-      if (!data) {
-        alert('暂无数据可导出');
-        return;
-      }
-      const payload = JSON.stringify({ page: PAGE, hash, data, version: 1 });
-      const blob = new Blob([payload], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `zen-${PAGE}-backup.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      alert('已导出加密备份文件。请在其他设备使用「导入」功能，并使用相同密码解锁。');
-    }
-
-    function importData() {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json,application/json';
-      input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-          const text = await file.text();
-          const obj = JSON.parse(text);
-          if (!obj.data || !obj.hash) throw new Error('格式错误');
-          if (!confirm('导入将覆盖当前本页数据，是否继续？')) return;
-          localStorage.setItem(DATA_KEY, obj.data);
-          localStorage.setItem(HASH_KEY, obj.hash);
-          alert('导入成功！请使用原密码解锁。');
-          location.reload();
-        } catch (err) {
-          alert('导入失败：' + err.message);
-        }
-      };
-      input.click();
-    }
-
-    async function clearAll() {
-      if (!confirm('确定清除本页所有链接和密码？此操作不可恢复。')) return;
-      localStorage.removeItem(DATA_KEY);
-      localStorage.removeItem(HASH_KEY);
-      sessionStorage.removeItem(SESSION_KEY);
-      location.reload();
-    }
-
-    // 回车提交
-    document.getElementById('lockPwd').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        if (document.getElementById('lockPwd2').style.display !== 'none') {
-          document.getElementById('lockPwd2').focus();
+        lastGood = j.data;
+        lastTime = new Date();
+        render(lastGood, lastTime);
+        renderNotice(lastGood);
+      })
+      .catch(function(err){
+        if (lastGood){
+          render(lastGood, lastTime);   // 回退到上次成功的数据
+          showOffline();
+          $("statusBadge").className = "badge warn";
+          $("statusBadge").textContent = "数据可能已过期";
         } else {
-          handleLockAction();
+          $("statusBadge").className = "badge bad";
+          $("statusBadge").textContent = "获取失败：" + (err && err.message ? err.message : "网络错误");
+          showOffline();
         }
-      }
-    });
-    document.getElementById('lockPwd2').addEventListener('keydown', e => {
-      if (e.key === 'Enter') handleLockAction();
-    });
-    document.getElementById('urlInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') addLink();
-    });
-    document.getElementById('nameInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('urlInput').focus();
-    });
+      })
+      .then(function(){
+        $("refreshBtn").disabled = false;
+        $("refreshBtn").textContent = "刷新";
+      });
+  }
 
-    // 初始化：跨页共享解锁 —— 有共享密码则直接进入，无需再输
-    (async () => {
-      const pwd = localStorage.getItem(SHARED_PWD_KEY);
-      if (pwd) {
-        // 本地缓存的全局密码先跟服务端 hash 比对，不匹配直接作废（修：换设备/旧缓存哈希不一致）
-        let bad = false;
-        try {
-          const r = await fetch(`${WORKER_URL}/api/${PAGE}`);
-          const c = await r.json();
-          const h = await sha256(pwd);
-          if (c && c.pwd_hash && h !== c.pwd_hash) bad = true;
-          if (c && (c.pwd_hash || c.hash)) localStorage.setItem(HASH_KEY, c.pwd_hash || c.hash);
-        } catch {}
-        if (bad) {
-          localStorage.removeItem(SHARED_PWD_KEY);
-          sessionStorage.removeItem(SESSION_KEY);
-          showLockUI();
-          return;
-        }
-        currentPassword = pwd;
-        if (!localStorage.getItem(HASH_KEY)) {
-          localStorage.setItem(HASH_KEY, await sha256(pwd));
-        }
-        await loadLinks();
-        document.getElementById('lockOverlay').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
-        render();
-        return;
-      }
-      showLockUI();
-    })();
-  </script>
-  <script src="links_cols.js?v=3"></script>
+  // ------- 交互 -------
+  $("refreshBtn").addEventListener("click", function(){ load(false); });
+
+  $("autoBtn").addEventListener("click", function(){
+    if (autoTimer){
+      clearInterval(autoTimer); autoTimer = null;
+      this.textContent = "自动刷新：关";
+      this.classList.remove("primary");
+    } else {
+      autoTimer = setInterval(function(){ load(true); }, AUTO_MS);
+      this.textContent = "自动刷新：开";
+      this.classList.add("primary");
+      load(true);
+    }
+  });
+
+  $("copyBtn").addEventListener("click", function(){
+    var t = $("cardnoText").textContent;
+    var btn = this;
+    var done = function(){ btn.textContent = "已复制"; setTimeout(function(){ btn.textContent = "复制"; }, 1300); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(done, function(){ done(); });
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = t; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch(e){}
+      document.body.removeChild(ta); done();
+    }
+  });
+
+  // 页面回到前台时顺带刷新一次
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden && lastGood) load(true);
+  });
+
+  // ------- 启动 -------
+  $("cardnoText").textContent = CARD;
+  load(false);
+})();
+</script>
 </body>
 </html>
