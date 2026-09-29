@@ -132,6 +132,9 @@
     .nav-btn.ai {
       background: linear-gradient(135deg, #6b4a8a, #5a3d7a);
     }
+    .nav-btn.iot {
+      background: linear-gradient(135deg, #a8453c, #8a3630);
+    }
     @media (max-width: 600px) {
       .side-nav {
         width: 100%;
@@ -143,11 +146,14 @@
         border-right: none;
         border-bottom: 1px solid rgba(74,103,65,0.2);
       }
+      .side-nav { gap: 0.45rem; }
       .nav-btn {
         width: auto;
         height: auto;
-        padding: 0.5rem 1rem;
+        padding: 0.42rem 0.62rem;
         border-radius: 50px;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
         font-size: 0.85rem;
       }
       .container {
@@ -226,12 +232,13 @@
   </style>
 </head>
 <body>
-  <!-- 左侧导航 WORK / LIFE / NOTE / AI -->
+  <!-- 左侧导航 WORK / LIFE / NOTE / AI / 物联卡 -->
   <nav class="side-nav">
     <a href="work.html" class="nav-btn">WORK</a>
     <a href="life.html" class="nav-btn life">LIFE</a>
     <a href="note.html" class="nav-btn note">NOTE</a>
     <a href="ai.html" class="nav-btn ai">AI</a>
+    <a href="iot.html" class="nav-btn iot">物联卡</a>
   </nav>
 
   <div class="container">
